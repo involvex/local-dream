@@ -1,11 +1,19 @@
 cmake_minimum_required(VERSION 3.18)
 project(libstable_diffusion_core.so C CXX)
 
+# Required for tokenizers-cpp submodule CMake compatibility
+cmake_policy(SET CMP0126 NEW)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# QNN SDK PATH
-set(QNN_SDK_ROOT /data/qairt/2.39.0.250926)
+# QNN SDK PATH - can be overridden via QNN_SDK_ROOT environment variable
+if(DEFINED ENV{QNN_SDK_ROOT})
+    set(QNN_SDK_ROOT "$ENV{QNN_SDK_ROOT}" CACHE PATH "Path to QNN SDK")
+else()
+    set(QNN_SDK_ROOT "D:/repos/local-dream/app/src/main/cpp/qairt/2.39.0.250926" CACHE PATH "Path to QNN SDK")
+endif()
 
 file(COPY ${QNN_SDK_ROOT}/examples/QNN/SampleApp/SampleApp/
     DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SampleApp)
@@ -61,11 +69,9 @@ file(COPY ${QNN_SDK_ROOT}/lib/hexagon-v81/unsigned/libQnnHtpV81.so
 file(COPY ${QNN_SDK_ROOT}/lib/hexagon-v81/unsigned/libQnnHtpV81Skel.so
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/qnnlibs)
 
-if(WIN32)
-    set(PLATFORM_NAME "windows")
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     set(HOST_TAG "windows-x86_64")
 else()
-    set(PLATFORM_NAME "linux")
     set(HOST_TAG "linux-x86_64")
 endif()
 

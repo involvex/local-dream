@@ -1,6 +1,19 @@
 @echo off
 setlocal EnableDelayedExpansion
 
+REM Set default Android NDK path if not set
+if "%ANDROID_NDK_ROOT%"=="" (
+    set "ANDROID_NDK_ROOT=C:\Users\lukas\AppData\Local\Android\Sdk\ndk\28.2.13676358"
+)
+
+REM Set default QNN SDK path if not set
+if "%QNN_SDK_ROOT%"=="" (
+    set "QNN_SDK_ROOT=D:\repos\local-dream\app\src\main\cpp\qairt\2.39.0.250926"
+)
+
+REM Convert patch line endings (required on Windows)
+dos2unix SampleApp.patch 2>nul
+
 cmake --preset android-release
 if %ERRORLEVEL% neq 0 goto :error
 

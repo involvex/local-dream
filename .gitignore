@@ -13,3 +13,8 @@ app/release
 app/basic
 app/filter
 app/src/main/assets/qnnlibs
+*.log
+app/src/main/cpp/android-ndk-r27d
+app/src/main/cpp/ndk.zip
+app/src/main/cpp/QNN_SDK.zip
+app/src/main/cpp/qairt
