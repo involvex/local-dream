@@ -25,6 +25,7 @@ import io.github.xororz.localdream.ui.screens.MigrationScreen
 import io.github.xororz.localdream.ui.screens.ModelListScreen
 import io.github.xororz.localdream.ui.screens.ModelRunScreen
 import io.github.xororz.localdream.ui.screens.UpscaleScreen
+import io.github.xororz.localdream.ui.screens.ImageCompareScreen
 import io.github.xororz.localdream.ui.theme.LocalDreamTheme
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
@@ -170,6 +171,25 @@ private fun AppContent() {
         }
         composable(Screen.Upscale.route) {
             UpscaleScreen(navController)
+        }
+        composable(
+            route = Screen.ImageCompare.route,
+            arguments = listOf(
+                navArgument("left") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("right") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val left = backStackEntry.arguments?.getString("left") ?: ""
+            val right = backStackEntry.arguments?.getString("right") ?: ""
+            ImageCompareScreen(leftPath = left, rightPath = right, navController = navController)
         }
     }
 }

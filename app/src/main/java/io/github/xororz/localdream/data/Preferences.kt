@@ -30,6 +30,8 @@ class GenerationPreferences(private val context: Context) {
 
     private fun getBatchCountsKey(modelId: String) = intPreferencesKey("${modelId}_batch_counts")
     private fun getSchedulerKey(modelId: String) = stringPreferencesKey("${modelId}_scheduler")
+    private fun getSelectedTemplateKey(modelId: String) = stringPreferencesKey("${modelId}_selected_template")
+    private fun getPromptVariationEnabledKey(modelId: String) = booleanPreferencesKey("${modelId}_prompt_variation_enabled")
 
     private val BASE_URL_KEY = stringPreferencesKey("base_url")
     private val SELECTED_SOURCE_KEY = stringPreferencesKey("selected_source")
@@ -95,7 +97,9 @@ class GenerationPreferences(private val context: Context) {
         denoiseStrength: Float,
         useOpenCL: Boolean,
         batchCounts: Int,
-        scheduler: String
+        scheduler: String,
+        selectedTemplateId: String? = null,
+        promptVariationEnabled: Boolean = false
     ) {
         context.dataStore.edit { preferences ->
             preferences[getPromptKey(modelId)] = prompt
@@ -109,6 +113,8 @@ class GenerationPreferences(private val context: Context) {
             preferences[getUseOpenCLKey(modelId)] = useOpenCL
             preferences[getBatchCountsKey(modelId)] = batchCounts
             preferences[getSchedulerKey(modelId)] = scheduler
+            preferences[getSelectedTemplateKey(modelId)] = selectedTemplateId ?: ""
+            preferences[getPromptVariationEnabledKey(modelId)] = promptVariationEnabled
         }
     }
 
@@ -116,6 +122,18 @@ class GenerationPreferences(private val context: Context) {
         context.dataStore.edit { preferences ->
             preferences[getWidthKey(modelId)] = width
             preferences[getHeightKey(modelId)] = height
+        }
+    }
+
+    suspend fun saveSelectedTemplate(modelId: String, templateId: String?) {
+        context.dataStore.edit { preferences ->
+            preferences[getSelectedTemplateKey(modelId)] = templateId ?: ""
+        }
+    }
+
+    suspend fun savePromptVariationEnabled(modelId: String, enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[getPromptVariationEnabledKey(modelId)] = enabled
         }
     }
 
@@ -140,7 +158,9 @@ class GenerationPreferences(private val context: Context) {
                     denoiseStrength = preferences[getDenoiseStrengthKey(modelId)] ?: 0.6f,
                     useOpenCL = preferences[getUseOpenCLKey(modelId)] ?: false,
                     batchCounts = preferences[getBatchCountsKey(modelId)] ?: 1,
-                    scheduler = preferences[getSchedulerKey(modelId)] ?: "dpm"
+                    scheduler = preferences[getSchedulerKey(modelId)] ?: "dpm",
+                    selectedTemplateId = preferences[getSelectedTemplateKey(modelId)]?.takeIf { it.isNotEmpty() },
+                    promptVariationEnabled = preferences[getPromptVariationEnabledKey(modelId)] ?: false
                 )
             }
     }
@@ -158,6 +178,8 @@ class GenerationPreferences(private val context: Context) {
             preferences.remove(getUseOpenCLKey(modelId))
             preferences.remove(getBatchCountsKey(modelId))
             preferences.remove(getSchedulerKey(modelId))
+            preferences.remove(getSelectedTemplateKey(modelId))
+            preferences.remove(getPromptVariationEnabledKey(modelId))
         }
     }
 }
@@ -174,5 +196,7 @@ data class GenerationPrefs(
     val denoiseStrength: Float = 0.6f,
     val useOpenCL: Boolean = false,
     val batchCounts: Int = 1,
-    val scheduler: String = "dpm"
+    val scheduler: String = "dpm",
+    val selectedTemplateId: String? = null,
+    val promptVariationEnabled: Boolean = false
 )

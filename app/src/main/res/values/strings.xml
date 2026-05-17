@@ -306,4 +306,24 @@
     <string name="history_filter_sort_desc">Newest first</string>
     <string name="history_filter_sort_asc">Oldest first</string>
     <string name="history_view_filter">Filter</string>
+    <!-- Prompt Templates -->
+    <string name="templates">Templates</string>
+    <string name="templates_hint">Choose a prompt template</string>
+    <string name="template_category_anime">Anime</string>
+    <string name="template_category_realistic">Realistic</string>
+    <string name="template_category_landscape">Landscape</string>
+    <string name="template_category_portrait">Portrait</string>
+    <string name="template_category_custom">Custom</string>
+    <string name="apply_template">Apply Template</string>
+    <string name="prompt_variation">Prompt Variation</string>
+    <string name="prompt_variation_hint">Generate variations of the prompt</string>
+    <string name="generate_variations">Generate Variations</string>
+    <string name="variation_count">%d variations</string>
+    <string name="no_template_selected">No template selected</string>
+    <string name="template_applied">Template applied</string>
+    <!-- Image Compare -->
+    <string name="image_compare_title">Compare Images</string>
+    <string name="swap_images">Swap sides</string>
+    <string name="left_image">Left image</string>
+    <string name="right_image">Right image</string>
 </resources>

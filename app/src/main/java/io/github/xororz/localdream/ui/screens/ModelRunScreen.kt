@@ -116,6 +116,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -171,6 +172,10 @@ import io.github.xororz.localdream.data.TagMatchType
 import io.github.xororz.localdream.data.TagSuggestion
 import io.github.xororz.localdream.data.UpscalerModel
 import io.github.xororz.localdream.data.UpscalerRepository
+import io.github.xororz.localdream.data.PromptTemplate
+import io.github.xororz.localdream.data.PromptTemplateCategory
+import io.github.xororz.localdream.data.PromptTemplates
+import io.github.xororz.localdream.utils.PromptVariationGenerator
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
@@ -324,6 +329,7 @@ data class GenerationParameters(
     val useOpenCL: Boolean = false,
     val scheduler: String = "dpm",
     val mode: GenerationMode = GenerationMode.UNKNOWN,
+    val batchCount: Int = 1,
 )
 
 @SuppressLint("DefaultLocale")
@@ -415,7 +421,8 @@ fun ModelRunScreen(
                 generationTime = "",
                 width = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
                 height = if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512,
-                runOnCpu = model?.runOnCpu ?: false
+                runOnCpu = model?.runOnCpu ?: false,
+                batchCount = 1
             )
         )
     }
@@ -436,6 +443,13 @@ fun ModelRunScreen(
     var useOpenCL by remember { mutableStateOf(false) }
     var batchCounts by remember { mutableStateOf(1) }
     var scheduler by remember { mutableStateOf("dpm") }
+
+    // Template and variation state
+    var selectedTemplateId by remember { mutableStateOf<String?>(null) }
+    var promptVariationEnabled by remember { mutableStateOf(false) }
+    var showTemplateDialog by remember { mutableStateOf(false) }
+    var showVariationDialog by remember { mutableStateOf(false) }
+    var promptVariations by remember { mutableStateOf<List<String>>(emptyList()) }
     var currentBatchIndex by remember { mutableStateOf(0) }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var base64EncodeDone by remember { mutableStateOf(false) }
@@ -552,7 +566,9 @@ fun ModelRunScreen(
                 denoiseStrength = denoiseStrength,
                 useOpenCL = useOpenCL,
                 batchCounts = batchCounts,
-                scheduler = scheduler
+                scheduler = scheduler,
+                selectedTemplateId = selectedTemplateId,
+                promptVariationEnabled = promptVariationEnabled
             )
         }
     }
@@ -1066,6 +1082,8 @@ fun ModelRunScreen(
             useOpenCL = prefs.useOpenCL
             batchCounts = prefs.batchCounts
             scheduler = prefs.scheduler
+            selectedTemplateId = prefs.selectedTemplateId
+            promptVariationEnabled = prefs.promptVariationEnabled
 
             currentWidth =
                 if (model?.isSdxl == true) 1024
@@ -1169,6 +1187,7 @@ fun ModelRunScreen(
                         useOpenCL = generationParamsTmp.useOpenCL,
                         scheduler = generationParamsTmp.scheduler,
                         mode = currentGenerationMode,
+                        batchCount = batchCounts
                     )
 
                     // Save to disk and update history list. The saved item's id is
@@ -1483,8 +1502,34 @@ fun ModelRunScreen(
                                 fontWeight = FontWeight.Bold
                             )
                             Row(
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                FilledTonalButton(
+                                    onClick = { showTemplateDialog = true },
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text(
+                                        selectedTemplateId?.let { id ->
+                                            PromptTemplates.getTemplateById(id)?.name ?: stringResource(R.string.templates)
+                                        } ?: stringResource(R.string.templates),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = {
+                                        promptVariations = PromptVariationGenerator.generateVariations(prompt, 5)
+                                        showVariationDialog = true
+                                    },
+                                    enabled = prompt.isNotBlank(),
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.AutoFixHigh,
+                                        contentDescription = stringResource(R.string.prompt_variation),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                                 if (useImg2img) {
                                     TextButton(
                                         onClick = {
@@ -1552,6 +1597,7 @@ fun ModelRunScreen(
                                                     useOpenCL = useOpenCL,
                                                     scheduler = scheduler,
                                                     mode = currentMode,
+                                                    batchCount = batchCounts
                                                 )
                                             }) {
                                                 Icon(
@@ -2006,7 +2052,8 @@ fun ModelRunScreen(
                                             runOnCpu = model?.runOnCpu ?: false,
                                             denoiseStrength = denoiseStrength,
                                             useOpenCL = useOpenCL,
-                                            scheduler = scheduler
+                                            scheduler = scheduler,
+                                            batchCount = batchCounts
                                         )
 
                                         val batchIntent = Intent(
@@ -4374,6 +4421,110 @@ fun ModelRunScreen(
         )
     }
 
+    // Template selection dialog
+    if (showTemplateDialog) {
+        AlertDialog(
+            onDismissRequest = { showTemplateDialog = false },
+            title = { Text(stringResource(R.string.templates)) },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(PromptTemplateCategory.entries.filter { it != PromptTemplateCategory.CUSTOM }) { category ->
+                        Column {
+                            Text(
+                                text = when (category) {
+                                    PromptTemplateCategory.ANIME -> stringResource(R.string.template_category_anime)
+                                    PromptTemplateCategory.REALISTIC -> stringResource(R.string.template_category_realistic)
+                                    PromptTemplateCategory.LANDSCAPE -> stringResource(R.string.template_category_landscape)
+                                    PromptTemplateCategory.PORTRAIT -> stringResource(R.string.template_category_portrait)
+                                    PromptTemplateCategory.CUSTOM -> ""
+                                },
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+                            PromptTemplates.getTemplatesByCategory(category).forEach { template ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            selectedTemplateId = template.id
+                                            prompt = template.prompt
+                                            negativePrompt = template.negativePrompt
+                                            promptFieldValue = TextFieldValue(prompt, TextRange(prompt.length))
+                                            negativePromptFieldValue = TextFieldValue(negativePrompt, TextRange(negativePrompt.length))
+                                            promptSuggestions = emptyList()
+                                            negativePromptSuggestions = emptyList()
+                                            saveAllFields()
+                                            showTemplateDialog = false
+                                            Toast.makeText(context, context.getString(R.string.template_applied), Toast.LENGTH_SHORT).show()
+                                        }
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
+                                        selected = selectedTemplateId == template.id,
+                                        onClick = null
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(template.name)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showTemplateDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    // Prompt variation dialog
+    if (showVariationDialog && promptVariations.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showVariationDialog = false },
+            title = {
+                Text(stringResource(R.string.prompt_variation, promptVariations.size))
+            },
+            text = {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(promptVariations) { variation ->
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    prompt = variation
+                                    promptFieldValue = TextFieldValue(variation, TextRange(variation.length))
+                                    promptSuggestions = emptyList()
+                                    negativePromptSuggestions = emptyList()
+                                    saveAllFields()
+                                    showVariationDialog = false
+                                }
+                        ) {
+                            Text(
+                                text = variation,
+                                modifier = Modifier.padding(12.dp),
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 3
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showVariationDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     // Batch delete confirmation dialog
     if (showBatchDeleteDialog && selectedItems.isNotEmpty()) {
         AlertDialog(
@@ -4495,6 +4646,7 @@ fun ModelRunScreen(
                         "%.2f".format(source.denoiseStrength)
 
                     ParamShareField.MODE -> source.mode.name.lowercase()
+                    ParamShareField.BATCH_COUNT -> source.batchCount.toString()
                 }
             },
             useBase64Initial = shareUseBase64,

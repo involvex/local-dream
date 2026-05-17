@@ -58,6 +58,7 @@ private fun fieldLabel(field: ParamShareField): String = when (field) {
     ParamShareField.SCHEDULER -> stringResource(R.string.scheduler)
     ParamShareField.DENOISE_STRENGTH -> stringResource(R.string.share_field_denoise)
     ParamShareField.MODE -> stringResource(R.string.share_field_mode)
+    ParamShareField.BATCH_COUNT -> stringResource(R.string.batch_count)
 }
 
 @Composable
@@ -233,6 +234,7 @@ fun ImportParametersDialog(
                             imported.denoiseStrength?.let { "%.2f".format(it) }
 
                         ParamShareField.MODE -> imported.mode?.name?.lowercase()
+                        ParamShareField.BATCH_COUNT -> imported.batchCount?.toString()
                     }
                     FieldRow(
                         field = field,

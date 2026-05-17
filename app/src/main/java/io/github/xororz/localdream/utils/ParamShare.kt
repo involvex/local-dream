@@ -14,6 +14,7 @@ enum class ParamShareField {
     SCHEDULER,
     DENOISE_STRENGTH,
     MODE,
+    BATCH_COUNT,
 }
 
 data class ImportedParams(
@@ -25,6 +26,7 @@ data class ImportedParams(
     val scheduler: String? = null,
     val denoiseStrength: Float? = null,
     val mode: GenerationMode? = null,
+    val batchCount: Int? = null
 ) {
     fun availableFields(): Set<ParamShareField> {
         // Switching mode requires user interaction (tab switching, source image
@@ -38,6 +40,7 @@ data class ImportedParams(
         if (seed != null) set += ParamShareField.SEED
         if (scheduler != null) set += ParamShareField.SCHEDULER
         if (denoiseStrength != null) set += ParamShareField.DENOISE_STRENGTH
+        if (batchCount != null) set += ParamShareField.BATCH_COUNT
         return set
     }
 }
@@ -66,6 +69,8 @@ object ParamShare {
         }
         // Mode is included as metadata (not a user-selectable field) when known.
         if (params.mode != GenerationMode.UNKNOWN) json.put("mode", params.mode.name)
+        // Batch count is metadata, not a user-selectable field
+        json.put("batch_count", params.batchCount)
         return json.toString()
     }
 
@@ -113,6 +118,8 @@ object ParamShare {
                 mode = if (json.has("mode")) runCatching {
                     GenerationMode.valueOf(json.optString("mode"))
                 }.getOrNull() else null,
+                batchCount = if (json.has("batch_count"))
+                    json.optInt("batch_count") else null,
             )
         }.getOrNull()
     }
