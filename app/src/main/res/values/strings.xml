@@ -131,6 +131,17 @@
     <string name="reset">Reset</string>
     <string name="reset_hint">Reset all parameters? This action cannot be undone. </string>
     <string name="scenarios">Scenario Presets</string>
+    <string name="tag_browser_title">Browse Tags</string>
+    <string name="search_tags">Search tags…</string>
+    <string name="scenario_management_title">Scenarios</string>
+    <string name="add_scenario">Add Scenario</string>
+    <string name="scenario_name">Scenario Name</string>
+    <string name="scenario_tags">Tags</string>
+    <string name="no_scenarios">No custom scenarios yet</string>
+    <string name="delete_scenario">Delete Scenario</string>
+    <string name="delete_scenario_confirm">Are you sure you want to delete this scenario?</string>
+    <string name="apply_scenario">Apply</string>
+    <string name="edit_scenario">Edit Scenario</string>
     <string name="media_permission_hint">Media permission is needed for img2img generation</string>
     <string name="backend_failed">Backend start failed. Maybe your device is not supported.</string>
 

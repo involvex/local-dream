@@ -26,6 +26,8 @@ import io.github.xororz.localdream.ui.screens.ModelListScreen
 import io.github.xororz.localdream.ui.screens.ModelRunScreen
 import io.github.xororz.localdream.ui.screens.UpscaleScreen
 import io.github.xororz.localdream.ui.screens.ImageCompareScreen
+import io.github.xororz.localdream.ui.screens.TagBrowserScreen
+import io.github.xororz.localdream.ui.screens.ScenarioManagementScreen
 import io.github.xororz.localdream.ui.theme.LocalDreamTheme
 import androidx.core.content.ContextCompat
 import android.content.pm.PackageManager
@@ -171,6 +173,24 @@ private fun AppContent() {
         }
         composable(Screen.Upscale.route) {
             UpscaleScreen(navController)
+        }
+        composable(Screen.TagBrowser.route) {
+            TagBrowserScreen(
+                onInsertTag = { tag ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("selected_tag", tag)
+                    navController.popBackStack()
+                },
+                onNavigateUp = { navController.popBackStack() }
+            )
+        }
+        composable(Screen.ScenarioManagement.route) {
+            ScenarioManagementScreen(
+                onNavigateUp = { navController.popBackStack() },
+                onApplyScenario = { tags ->
+                    navController.previousBackStackEntry?.savedStateHandle?.set("applied_scenario_tags", tags)
+                    navController.popBackStack()
+                }
+            )
         }
         composable(
             route = Screen.ImageCompare.route,

@@ -38,6 +38,7 @@ class GenerationPreferences(private val context: Context) {
     private val SHARE_USE_BASE64_KEY = booleanPreferencesKey("share_use_base64")
     private val SHARE_CLEAR_CLIPBOARD_KEY =
         booleanPreferencesKey("share_clear_clipboard_on_import")
+    private val CUSTOM_SCENARIOS_KEY = stringSetPreferencesKey("custom_scenarios")
 
     fun observeShareUseBase64(): Flow<Boolean> = context.dataStore.data
         .catch { exception ->
@@ -134,6 +135,66 @@ class GenerationPreferences(private val context: Context) {
     suspend fun savePromptVariationEnabled(modelId: String, enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[getPromptVariationEnabledKey(modelId)] = enabled
+        }
+    }
+
+    // Custom Scenario management
+    data class CustomScenario(
+        val id: String = "",
+        val name: String,
+        val tags: String,
+        val createdAt: Long = System.currentTimeMillis()
+    )
+
+    private fun CustomScenario.serialize(): String = "$id:::$name:::$tags:::$createdAt"
+    private fun deserializeScenario(data: String): CustomScenario? {
+        val parts = data.split(":::", limit = 4)
+        return if (parts.size == 4) {
+            CustomScenario(
+                id = parts[0],
+                name = parts[1],
+                tags = parts[2],
+                createdAt = parts[3].toLongOrNull() ?: 0L
+            )
+        } else null
+    }
+
+    suspend fun getCustomScenarios(): List<CustomScenario> {
+        return context.dataStore.data
+            .catch { exception ->
+                if (exception is IOException) emit(emptyPreferences()) else throw exception
+            }
+            .map { preferences ->
+                preferences[CUSTOM_SCENARIOS_KEY]?.mapNotNull { deserializeScenario(it) } ?: emptyList()
+            }
+            .first()
+    }
+
+    suspend fun saveCustomScenario(scenario: CustomScenario) {
+        val current = getCustomScenarios().toMutableList()
+        val existingIdx = current.indexOfFirst { it.id == scenario.id }
+        val toSave = if (existingIdx >= 0) {
+            current[existingIdx] = scenario
+            current
+        } else {
+            current + scenario.copy(id = java.util.UUID.randomUUID().toString())
+        }
+        context.dataStore.edit { preferences ->
+            preferences[CUSTOM_SCENARIOS_KEY] = toSave.map { it.serialize() }.toSet()
+        }
+    }
+
+    suspend fun deleteCustomScenario(id: String) {
+        val current = getCustomScenarios().toMutableList()
+        current.removeAll { it.id == id }
+        context.dataStore.edit { preferences ->
+            preferences[CUSTOM_SCENARIOS_KEY] = current.map { it.serialize() }.toSet()
+        }
+    }
+
+    suspend fun clearAllCustomScenarios() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(CUSTOM_SCENARIOS_KEY)
         }
     }
 

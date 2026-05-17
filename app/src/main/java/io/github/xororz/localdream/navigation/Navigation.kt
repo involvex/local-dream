@@ -9,6 +9,8 @@ sealed class Screen(val route: String) {
     }
 
     object Upscale : Screen("upscale")
+    object TagBrowser : Screen("tag_browser")
+    object ScenarioManagement : Screen("scenario_management")
 
     object ImageCompare : Screen("image_compare?left={left}&right={right}") {
         fun createRoute(left: String, right: String) =

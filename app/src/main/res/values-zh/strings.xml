@@ -141,13 +141,13 @@
     <string name="use_last_seed">使用上次的种子 (%s)</string>
     <string name="batch_count">批次数量: %d</string>
     <string name="reproduce">复制</string>
-    <string name="result_params">步数: %s / CFG: %.1f / 种子: %s</string>
-    <string name="result_params_2">尺寸: %sx%s / 耗时: %s / %s</string>
+    <string name="result_params">步数: %1$s / CFG: %2$.1f / 种子: %3$s</string>
+    <string name="result_params_2">尺寸: %1$sx%2$s / 耗时: %3$s / %4$s</string>
     <string name="params_detail">生成参数详情</string>
     <string name="basic_params">基础参数</string>
     <string name="basic_model">模型: %s</string>
     <string name="basic_step">步数: %d</string>
-    <string name="basic_size">尺寸: %dx%d</string>
+    <string name="basic_size">尺寸: %1$dx%2$d</string>
     <string name="basic_seed">种子: %s</string>
     <string name="basic_runtime">运行: %s</string>
     <string name="basic_mode">模式: %s</string>

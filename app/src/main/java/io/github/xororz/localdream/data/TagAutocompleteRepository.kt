@@ -27,6 +27,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
     private var loadedData: TagData? = null
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    private val favPrefs = context.getSharedPreferences(FAV_PREFS_NAME, Context.MODE_PRIVATE)
     private val dictDir = File(context.filesDir, DICT_DIR).also { it.mkdirs() }
     private val mainFile = File(dictDir, MAIN_FILE_NAME)
     private val translationFile = File(dictDir, TRANSLATION_FILE_NAME)
@@ -621,12 +622,65 @@ class TagAutocompleteRepository private constructor(private val context: Context
     private fun containsNonAsciiLetter(value: String): Boolean =
         value.any { it.code > 127 && it.isLetter() }
 
-    private fun popularityScore(postCount: Int): Int = when {
+    fun popularityScore(postCount: Int): Int = when {
         postCount >= 1_000_000 -> 300
         postCount >= 100_000 -> 220
         postCount >= 10_000 -> 140
         postCount >= 1_000 -> 80
         else -> 20
+    }
+
+    private val FAV_KEY = "favorite_tags"
+
+    fun getFavorites(): Set<String> = favPrefs.getStringSet(FAV_KEY, emptySet()) ?: emptySet()
+
+    fun isFavorite(tag: String): Boolean = getFavorites().contains(tag)
+
+    fun toggleFavorite(tag: String) {
+        val current = getFavorites().toMutableSet()
+        if (!current.add(tag)) {
+            current.remove(tag)
+        }
+        favPrefs.edit { putStringSet(FAV_KEY, current) }
+    }
+
+    suspend fun getAllEntries(): List<TagEntry> = ensureLoaded()?.entries ?: emptyList()
+
+    suspend fun searchEntries(query: String, limit: Int = 100): List<TagEntry> {
+        val data = ensureLoaded() ?: return emptyList()
+        if (query.isBlank()) return emptyList()
+        val normalized = normalizeQuery(query)
+        return data.entries
+            .filter { it.normalizedEnglish.contains(normalized, ignoreCase = true) ||
+                      it.aliases.any { a -> a.contains(normalized, ignoreCase = true) } }
+            .sortedWith(compareByDescending<TagEntry> { popularityScore(it.postCount) }
+                .thenBy { it.english })
+            .take(limit)
+    }
+
+    suspend fun getEntriesByCategory(): Map<Int, List<TagEntry>> {
+        val data = ensureLoaded() ?: return emptyMap()
+        return data.entries.groupBy { it.category }
+            .toSortedMap(compareByDescending { cat ->
+                data.entries.filter { e -> e.category == cat }.sumOf { popularityScore(it.postCount) }
+            })
+    }
+
+    suspend fun getTopEntriesByCategory(category: Int, limit: Int = 50): List<TagEntry> {
+        val data = ensureLoaded() ?: return emptyList()
+        return data.entries
+            .filter { it.category == category }
+            .sortedWith(compareByDescending<TagEntry> { popularityScore(it.postCount) })
+            .take(limit)
+    }
+
+    fun getCategoryName(category: Int): String = when (category) {
+        0 -> "General"
+        1 -> "Artist"
+        2 -> "Copyright"
+        3 -> "Character"
+        4 -> "Meta"
+        else -> "Other"
     }
 
     private fun correctionThreshold(length: Int): Int = when {
@@ -679,6 +733,7 @@ class TagAutocompleteRepository private constructor(private val context: Context
 
     companion object {
         private const val PREFS_NAME = "tag_autocomplete_prefs"
+        private const val FAV_PREFS_NAME = "tag_favorites_prefs"
         private const val DICT_DIR = "tagcomplete"
         private const val MAIN_FILE_NAME = "main.csv"
         private const val TRANSLATION_FILE_NAME = "translation.csv"

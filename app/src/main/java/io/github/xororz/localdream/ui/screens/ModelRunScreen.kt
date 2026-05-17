@@ -85,6 +85,8 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Bookmarks
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Report
 import androidx.compose.material.icons.filled.Save
@@ -141,7 +143,6 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -176,7 +177,6 @@ import io.github.xororz.localdream.data.PromptTemplate
 import io.github.xororz.localdream.data.PromptTemplateCategory
 import io.github.xororz.localdream.data.PromptTemplates
 import io.github.xororz.localdream.utils.PromptVariationGenerator
-import io.github.xororz.localdream.data.ScenarioPresets
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
@@ -213,6 +213,8 @@ import kotlin.math.roundToInt
 import android.graphics.Rect as AndroidRect
 import androidx.core.graphics.scale
 import androidx.core.content.edit
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.coroutineScope
 
 
 private fun checkStoragePermission(context: Context): Boolean {
@@ -346,7 +348,6 @@ fun ModelRunScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val generationPreferences = remember { GenerationPreferences(context) }
-    val coroutineScope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
     val modelRepository = remember { ModelRepository(context) }
     val model = remember { modelRepository.models.find { it.id == modelId } }
@@ -367,7 +368,7 @@ fun ModelRunScreen(
 
     var currentBitmap by remember { mutableStateOf<Bitmap?>(null) }
     var intermediateBitmap by remember { mutableStateOf<Bitmap?>(null) }
-    var imageVersion by remember { mutableStateOf(0) }
+    var imageVersion by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     var generationParams by remember { mutableStateOf<GenerationParameters?>(null) }
     var generationParamsModelId by remember { mutableStateOf(modelId) }
 
@@ -437,8 +438,8 @@ fun ModelRunScreen(
     var negativePromptActiveQuery by remember { mutableStateOf<String?>(null) }
     var isPromptFocused by remember { mutableStateOf(false) }
     var isNegativePromptFocused by remember { mutableStateOf(false) }
-    var cfg by remember { mutableStateOf(7f) }
-    var steps by remember { mutableStateOf(20f) }
+    var cfg by remember { androidx.compose.runtime.mutableFloatStateOf(7f) }
+    var steps by remember { androidx.compose.runtime.mutableFloatStateOf(20f) }
     var seed by remember { mutableStateOf("") }
     var denoiseStrength by remember { mutableStateOf(0.6f) }
     var useOpenCL by remember { mutableStateOf(false) }
@@ -461,10 +462,10 @@ fun ModelRunScreen(
     var isCheckingBackend by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showParametersDialog by remember { mutableStateOf(false) }
-    var showScenarioDialog by remember { mutableStateOf(false) }
     var pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     var generationStartTime by remember { mutableStateOf<Long?>(null) }
     var hasInitialized by remember { mutableStateOf(false) }
+
     var showReportDialog by remember { mutableStateOf(false) }
 
     var currentWidth by remember { mutableStateOf(if (model?.isSdxl == true) 1024 else if (model?.runOnCpu == true) 256 else 512) }
@@ -583,6 +584,40 @@ fun ModelRunScreen(
                 selectedTemplateId = selectedTemplateId,
                 promptVariationEnabled = promptVariationEnabled
             )
+        }
+    }
+
+    // Handle results from TagBrowser and ScenarioManagement
+    val selectedTagState = navController.currentBackStackEntry?.savedStateHandle?.getStateFlow("selected_tag", "")?.collectAsState()
+    val appliedScenarioTagsState = navController.currentBackStackEntry?.savedStateHandle?.getStateFlow("applied_scenario_tags", "")?.collectAsState()
+
+    LaunchedEffect(selectedTagState?.value) {
+        selectedTagState?.value?.let { tag ->
+            if (tag.isNotEmpty()) {
+                val currentPrompt = promptFieldValue.text
+                val newPrompt = if (currentPrompt.isEmpty()) {
+                    tag
+                } else if (currentPrompt.trim().endsWith(",")) {
+                    "$currentPrompt $tag"
+                } else {
+                    "$currentPrompt, $tag"
+                }
+                prompt = newPrompt
+                promptFieldValue = TextFieldValue(newPrompt, TextRange(newPrompt.length))
+                saveAllFields()
+                navController.currentBackStackEntry?.savedStateHandle?.set("selected_tag", "")
+            }
+        }
+    }
+
+    LaunchedEffect(appliedScenarioTagsState?.value) {
+        appliedScenarioTagsState?.value?.let { tags ->
+            if (tags.isNotEmpty()) {
+                prompt = tags
+                promptFieldValue = TextFieldValue(tags, TextRange(tags.length))
+                saveAllFields()
+                navController.currentBackStackEntry?.savedStateHandle?.set("applied_scenario_tags", "")
+            }
         }
     }
 
@@ -958,7 +993,7 @@ fun ModelRunScreen(
                 snapshotHistoryItemId != null &&
                 currentDisplayedHistoryId == snapshotHistoryItemId
 
-        coroutineScope.launch {
+        scope.launch {
             if (shouldStitch) {
                 withContext(Dispatchers.IO) {
                     var originalBitmap: Bitmap? = null
@@ -1020,7 +1055,7 @@ fun ModelRunScreen(
             errorMessage = null
             currentBatchIndex = 0
             BackgroundGenerationService.resetState()
-            coroutineScope.launch {
+            scope.launch {
                 pagerState.scrollToPage(0)
             }
             saveAllJob?.cancel()
@@ -1207,7 +1242,7 @@ fun ModelRunScreen(
                     // forwarded to both the snapshot and the currently-displayed marker
                     // so handleSaveImage can later confirm the user is still looking at
                     // this generation (and not a different history thumbnail).
-                    coroutineScope.launch(Dispatchers.IO) {
+                    scope.launch(Dispatchers.IO) {
                         val savedItem = historyManager.saveGeneratedImage(
                             modelId = modelId,
                             bitmap = state.bitmap,
@@ -1543,13 +1578,24 @@ fun ModelRunScreen(
                                         modifier = Modifier.size(16.dp)
                                     )
                                 }
-                                FilledTonalButton(
-                                    onClick = { showScenarioDialog = true },
-                                    modifier = Modifier.height(36.dp)
+                                IconButton(
+                                    onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.TagBrowser.route) },
+                                    modifier = Modifier.size(36.dp)
                                 ) {
-                                    Text(
-                                        stringResource(R.string.scenarios),
-                                        style = MaterialTheme.typography.bodySmall
+                                    Icon(
+                                        Icons.Default.Tag,
+                                        contentDescription = "browse tags",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.ScenarioManagement.route) },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Bookmarks,
+                                        contentDescription = "manage scenarios",
+                                        modifier = Modifier.size(20.dp)
                                     )
                                 }
                                 if (useImg2img) {
@@ -2052,7 +2098,7 @@ fun ModelRunScreen(
                                 val actualBatchCount =
                                     if (seed.isNotBlank()) 1 else batchCounts
 
-                                batchGenerationJob = coroutineScope.launch {
+                                batchGenerationJob = scope.launch {
                                     for (i in 0 until actualBatchCount) {
                                         currentBatchIndex = i + 1
                                         Log.d(
@@ -2510,7 +2556,7 @@ fun ModelRunScreen(
                             )
                             Button(
                                 onClick = {
-                                    coroutineScope.launch {
+                                    scope.launch {
                                         pagerState.animateScrollToPage(0)
                                     }
                                 },
@@ -2617,7 +2663,7 @@ fun ModelRunScreen(
                                             fadeOut(animationSpec = tween(400))
                                 },
                                 label = "ImagePreviewCrossfade"
-                            ) { version ->
+                            ) { _ ->
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -2776,7 +2822,7 @@ fun ModelRunScreen(
                         TextButton(
                             onClick = {
                                 showReportDialog = false
-                                coroutineScope.launch {
+                                scope.launch {
                                     currentBitmap?.let { bitmap ->
                                         reportImage(
                                             context = context,
@@ -3371,7 +3417,7 @@ fun ModelRunScreen(
                         Row {
                             TextButton(
                                 onClick = {
-                                    coroutineScope.launch {
+                                    scope.launch {
                                         focusManager.clearFocus()
                                         pagerState.animateScrollToPage(0)
                                     }
@@ -3386,7 +3432,7 @@ fun ModelRunScreen(
                             }
                             TextButton(
                                 onClick = {
-                                    coroutineScope.launch {
+                                    scope.launch {
                                         focusManager.clearFocus()
                                         pagerState.animateScrollToPage(1)
                                     }
@@ -3401,7 +3447,7 @@ fun ModelRunScreen(
                             }
                             TextButton(
                                 onClick = {
-                                    coroutineScope.launch {
+                                    scope.launch {
                                         focusManager.clearFocus()
                                         pagerState.animateScrollToPage(2)
                                     }
@@ -3425,7 +3471,8 @@ fun ModelRunScreen(
                     state = pagerState,
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
+                        .padding(paddingValues),
+                    userScrollEnabled = !isSelectionMode
                 ) { page ->
                     when (page) {
                         0 -> PromptPage()
@@ -3458,7 +3505,7 @@ fun ModelRunScreen(
                 originalBitmap = croppedBitmap!!,
                 existingMaskBitmap = if (isInpaintMode) maskBitmap else null,
                 existingPathHistory = savedPathHistory,
-                onInpaintComplete = { maskBase64, originalBitmap, maskBitmap, pathHistory ->
+                onInpaintComplete = { maskBase64, _, maskBitmap, pathHistory ->
                     handleInpaintComplete(maskBase64, maskBitmap, pathHistory)
                 },
                 onCancel = {
@@ -4434,7 +4481,7 @@ fun ModelRunScreen(
                     val saveProgress = if (batchSaveTotal > 0)
                         batchSaveCurrent.toFloat() / batchSaveTotal else 0f
                     LinearProgressIndicator(
-                        progress = saveProgress,
+                        progress = { saveProgress },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -4702,11 +4749,7 @@ fun ModelRunScreen(
                 context.getSystemService(Context.CLIPBOARD_SERVICE)
                         as? ClipboardManager
             runCatching {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    clipboard?.clearPrimaryClip()
-                } else {
-                    clipboard?.setPrimaryClip(ClipData.newPlainText("", ""))
-                }
+                clipboard?.setPrimaryClip(ClipData.newPlainText("", ""))
             }
         }
         ImportParametersDialog(
@@ -4889,7 +4932,7 @@ fun UpscalerModelCard(
             // Show progress bar when downloading
             if (isDownloading && downloadProgress != null) {
                 LinearProgressIndicator(
-                    progress = downloadProgress.progress,
+                    progress = { downloadProgress.progress },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)

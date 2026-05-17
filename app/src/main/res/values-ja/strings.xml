@@ -127,13 +127,13 @@
     <string name="use_last_seed">最後に利用したシードを利用 (%s)</string>
     <string name="batch_count">生成枚数: %d</string>
     <string name="reproduce">コピー</string>
-    <string name="result_params">ステップ: %s / CFG: %.1f / シード: %s</string>
-    <string name="result_params_2">サイズ: %s×%s / 処理時間: %s / %s</string>
+    <string name="result_params">ステップ: %1$s / CFG: %2$.1f / シード: %3$s</string>
+    <string name="result_params_2">サイズ: %1$s×%2$s / 処理時間: %3$s / %4$s</string>
     <string name="params_detail">パラメータの詳細</string>
     <string name="basic_params">基本パラメータ</string>
     <string name="basic_model">モデル: %s</string>
     <string name="basic_step">ステップ数: %d</string>
-    <string name="basic_size">サイズ: %dx%d</string>
+    <string name="basic_size">サイズ: %1$dx%2$d</string>
     <string name="basic_seed">シード: %s</string>
     <string name="basic_runtime">ランタイム: %s</string>
     <string name="basic_mode">モード: %s</string>
