@@ -3,6 +3,7 @@ package io.github.xororz.localdream.ui.screens
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Rect as AndroidRect
+import androidx.compose.ui.geometry.Rect
 import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
@@ -81,15 +82,15 @@ fun CropImageScreen(
                     cropifyState::class.java.getDeclaredField("frameRect\$delegate")
                 frameRectField.isAccessible = true
                 val frameRectState =
-                    frameRectField.get(cropifyState) as State<androidx.compose.ui.geometry.Rect>
-                val frameRect = frameRectState.value
+                    frameRectField.get(cropifyState) as State<*>
+                val frameRect = frameRectState.value as Rect
 
                 val imageRectField =
                     cropifyState::class.java.getDeclaredField("imageRect\$delegate")
                 imageRectField.isAccessible = true
                 val imageRectState =
-                    imageRectField.get(cropifyState) as State<androidx.compose.ui.geometry.Rect>
-                val imageRect = imageRectState.value
+                    imageRectField.get(cropifyState) as State<*>
+                val imageRect = imageRectState.value as Rect
 
                 // Get original image dimensions
                 val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }

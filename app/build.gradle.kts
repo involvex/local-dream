@@ -7,13 +7,13 @@ plugins {
 
 android {
     namespace = "io.github.xororz.localdream"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "io.github.xororz.localdream"
         minSdk = 28
 //        minSdk = 31
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 64
         versionName = "2.5.1"
 
