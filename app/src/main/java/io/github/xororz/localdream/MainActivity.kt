@@ -11,13 +11,17 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import io.github.xororz.localdream.data.MigrationState
 import io.github.xororz.localdream.navigation.Screen
+import io.github.xororz.localdream.ui.screens.MigrationScreen
 import io.github.xororz.localdream.ui.screens.ModelListScreen
 import io.github.xororz.localdream.ui.screens.ModelRunScreen
 import io.github.xororz.localdream.ui.screens.UpscaleScreen
@@ -111,41 +115,61 @@ class MainActivity : ComponentActivity() {
         checkStoragePermission()
         checkNotificationPermission()
 
+        val app = application as LocalDreamApplication
+
         setContent {
             LocalDreamTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    val navController = rememberNavController()
-                    NavHost(
-                        navController = navController,
-                        startDestination = Screen.ModelList.route
-                    ) {
-                        composable(Screen.ModelList.route) {
-                            ModelListScreen(navController)
-                        }
-                        composable(
-                            route = Screen.ModelRun.route,
-                            arguments = listOf(
-                                navArgument("modelId") {
-                                    type = NavType.StringType
-                                }
-                            )
-                        ) { backStackEntry ->
-                            val modelId = backStackEntry.arguments?.getString("modelId") ?: ""
+                    val migrationState by app.migrationState.collectAsState()
 
-                            ModelRunScreen(
-                                modelId = modelId,
-                                navController = navController
-                            )
-                        }
-                        composable(Screen.Upscale.route) {
-                            UpscaleScreen(navController)
-                        }
+                    when (migrationState) {
+                        is MigrationState.Done,
+                        is MigrationState.NotNeeded -> AppContent()
+
+                        is MigrationState.Idle,
+                        is MigrationState.InProgress,
+                        is MigrationState.Failed -> MigrationScreen(
+                            state = migrationState,
+                            onRetry = { app.retryMigration() },
+                            onSkip = { app.skipMigration() },
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@androidx.compose.runtime.Composable
+private fun AppContent() {
+    val navController = rememberNavController()
+    NavHost(
+        navController = navController,
+        startDestination = Screen.ModelList.route
+    ) {
+        composable(Screen.ModelList.route) {
+            ModelListScreen(navController)
+        }
+        composable(
+            route = Screen.ModelRun.route,
+            arguments = listOf(
+                navArgument("modelId") {
+                    type = NavType.StringType
+                }
+            )
+        ) { backStackEntry ->
+            val modelId = backStackEntry.arguments?.getString("modelId") ?: ""
+
+            ModelRunScreen(
+                modelId = modelId,
+                navController = navController
+            )
+        }
+        composable(Screen.Upscale.route) {
+            UpscaleScreen(navController)
         }
     }
 }

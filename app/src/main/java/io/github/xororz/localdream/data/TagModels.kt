@@ -4,7 +4,8 @@ enum class TagMatchType {
     Prefix,
     Alias,
     Translation,
-    Correction
+    Correction,
+    Embedding
 }
 
 data class TagEntry(

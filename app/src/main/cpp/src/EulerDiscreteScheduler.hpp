@@ -1,8 +1,7 @@
-// EulerAncestralDiscreteScheduler implementation
-// Based on HuggingFace diffusers EulerAncestralDiscreteScheduler
+// EulerDiscreteScheduler implementation
+// Based on HuggingFace diffusers EulerDiscreteScheduler
 #include <cmath>
 #include <optional>
-#include <random>
 #include <string>
 #include <vector>
 #include <xtensor/xadapt.hpp>
@@ -15,13 +14,15 @@
 
 #include "Scheduler.hpp"
 
-class EulerAncestralDiscreteScheduler : public Scheduler {
+class EulerDiscreteScheduler : public Scheduler {
  public:
-  EulerAncestralDiscreteScheduler(
-      int num_train_timesteps, float beta_start, float beta_end,
-      const std::string &beta_schedule, const std::string &prediction_type,
-      const std::string &timestep_spacing, int steps_offset = 0,
-      bool rescale_betas_zero_snr = false, bool use_karras_sigmas = false)
+  EulerDiscreteScheduler(int num_train_timesteps, float beta_start,
+                         float beta_end, const std::string &beta_schedule,
+                         const std::string &prediction_type,
+                         const std::string &timestep_spacing,
+                         int steps_offset = 0,
+                         bool rescale_betas_zero_snr = false,
+                         bool use_karras_sigmas = false)
       : num_train_timesteps_(num_train_timesteps),
         beta_start_(beta_start),
         beta_end_(beta_end),
@@ -32,7 +33,6 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
         rescale_betas_zero_snr_(rescale_betas_zero_snr),
         use_karras_sigmas_(use_karras_sigmas),
         is_scale_input_called_(false) {
-    // Initialize betas
     if (beta_schedule == "linear") {
       betas_ = xt::linspace<float>(beta_start_, beta_end_, num_train_timesteps);
     } else if (beta_schedule == "scaled_linear") {
@@ -58,10 +58,8 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
       alphas_cumprod_(alphas_cumprod_.size() - 1) = std::pow(2.0f, -24.0f);
     }
 
-    // Calculate sigmas
     sigmas_ = xt::sqrt((1.0f - alphas_cumprod_) / alphas_cumprod_);
 
-    // Reverse sigmas and append 0
     auto sigmas_vec = std::vector<float>(sigmas_.size() + 1);
     for (size_t i = 0; i < sigmas_.size(); ++i) {
       sigmas_vec[i] = sigmas_(sigmas_.size() - 1 - i);
@@ -69,7 +67,6 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
     sigmas_vec[sigmas_.size()] = 0.0f;
     sigmas_ = xt::adapt(sigmas_vec);
 
-    // Initialize timesteps
     auto timesteps_vec = std::vector<float>(num_train_timesteps);
     for (int i = 0; i < num_train_timesteps; ++i) {
       timesteps_vec[i] = float(num_train_timesteps - 1 - i);
@@ -92,13 +89,11 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
     }
 
     if (use_karras_sigmas_) {
-      // Reverse to descending and apply Karras schedule
       std::vector<float> reversed(base_sigmas_vec.rbegin(),
                                   base_sigmas_vec.rend());
       auto karras_sigmas =
           _convert_to_karras_vec(reversed, num_inference_steps);
 
-      // log_sigmas in ascending order (same as base_sigmas_vec)
       std::vector<float> log_sigmas(num_train_timesteps_);
       for (int i = 0; i < num_train_timesteps_; ++i) {
         log_sigmas[i] = std::log(std::max(base_sigmas_vec[i], 1e-10f));
@@ -153,12 +148,9 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
     }
 
     // Interpolate sigmas using np.interp logic
-    // sigmas = np.interp(timesteps, np.arange(0, len(sigmas)), sigmas)
     auto sigmas_vec = std::vector<float>(num_inference_steps + 1);
     for (int i = 0; i < num_inference_steps; ++i) {
       float t = timesteps_(i);
-
-      // Linear interpolation
       if (t <= 0.0f) {
         sigmas_vec[i] = base_sigmas_vec[0];
       } else if (t >= float(num_train_timesteps_ - 1)) {
@@ -216,81 +208,13 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
     } else {
       throw std::runtime_error(prediction_type_ +
                                " is not implemented for "
-                               "EulerAncestralDiscreteScheduler");
+                               "EulerDiscreteScheduler");
     }
 
-    float sigma_from = sigmas_(step_index_.value());
-    float sigma_to = sigmas_(step_index_.value() + 1);
-    float sigma_up = std::sqrt(sigma_to * sigma_to *
-                               (sigma_from * sigma_from - sigma_to * sigma_to) /
-                               (sigma_from * sigma_from));
-    float sigma_down = std::sqrt(sigma_to * sigma_to - sigma_up * sigma_up);
-
-    // Compute derivative
+    // Derivative and Euler step (no ancestral noise)
     xt::xarray<float> derivative = (sample - pred_original_sample) / sigma;
-
-    float dt = sigma_down - sigma;
-
+    float dt = sigmas_(step_index_.value() + 1) - sigma;
     xt::xarray<float> prev_sample = sample + derivative * dt;
-
-    // Add noise (ancestral sampling) - always add noise like PyTorch version
-    xt::xarray<float> noise =
-        xt::random::randn<float>(model_output.shape(), 0.0f, 1.0f,
-                                 xt::random::get_default_random_engine());
-    prev_sample = prev_sample + noise * sigma_up;
-
-    step_index_ = step_index_.value() + 1;
-    is_scale_input_called_ = false;
-
-    return {prev_sample, pred_original_sample};
-  }
-
-  // Overload of step() that accepts external noise for reproducibility
-  SchedulerOutput step_with_noise(const xt::xarray<float> &model_output,
-                                  int timestep, const xt::xarray<float> &sample,
-                                  const xt::xarray<float> &noise) {
-    if (!num_inference_steps_.has_value()) {
-      throw std::runtime_error("set_timesteps must be called before stepping");
-    }
-
-    if (!step_index_.has_value()) {
-      init_step_index(timestep);
-    }
-
-    float sigma = sigmas_(step_index_.value());
-
-    // Compute predicted original sample (x_0)
-    xt::xarray<float> pred_original_sample;
-    if (prediction_type_ == "epsilon") {
-      pred_original_sample = sample - sigma * model_output;
-    } else if (prediction_type_ == "v_prediction") {
-      pred_original_sample =
-          model_output * (-sigma / std::sqrt(sigma * sigma + 1.0f)) +
-          (sample / (sigma * sigma + 1.0f));
-    } else if (prediction_type_ == "sample") {
-      pred_original_sample = model_output;
-    } else {
-      throw std::runtime_error(prediction_type_ +
-                               " is not implemented for "
-                               "EulerAncestralDiscreteScheduler");
-    }
-
-    float sigma_from = sigmas_(step_index_.value());
-    float sigma_to = sigmas_(step_index_.value() + 1);
-    float sigma_up = std::sqrt(sigma_to * sigma_to *
-                               (sigma_from * sigma_from - sigma_to * sigma_to) /
-                               (sigma_from * sigma_from));
-    float sigma_down = std::sqrt(sigma_to * sigma_to - sigma_up * sigma_up);
-
-    // Compute derivative
-    xt::xarray<float> derivative = (sample - pred_original_sample) / sigma;
-
-    float dt = sigma_down - sigma;
-
-    xt::xarray<float> prev_sample = sample + derivative * dt;
-
-    // Add noise (ancestral sampling) - use provided noise for reproducibility
-    prev_sample = prev_sample + noise * sigma_up;
 
     step_index_ = step_index_.value() + 1;
     is_scale_input_called_ = false;
@@ -343,11 +267,9 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
   }
 
   float get_init_noise_sigma() const override {
-    // Standard deviation of the initial noise distribution
     if (timestep_spacing_ == "linspace" || timestep_spacing_ == "trailing") {
       return xt::amax(sigmas_)();
     }
-    // For "leading" spacing
     float max_sigma = xt::amax(sigmas_)();
     return std::sqrt(max_sigma * max_sigma + 1.0f);
   }
@@ -422,8 +344,6 @@ class EulerAncestralDiscreteScheduler : public Scheduler {
     float log_sigma = std::log(std::max(sigma, 1e-10f));
     int n = int(log_sigmas.size());
 
-    // log_sigmas is ascending: find the largest i where log_sigmas[i] <=
-    // log_sigma.
     int low_idx = 0;
     for (int i = 0; i < n; ++i) {
       if (log_sigmas[i] <= log_sigma) {

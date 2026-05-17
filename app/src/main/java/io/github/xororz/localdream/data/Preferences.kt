@@ -33,6 +33,29 @@ class GenerationPreferences(private val context: Context) {
 
     private val BASE_URL_KEY = stringPreferencesKey("base_url")
     private val SELECTED_SOURCE_KEY = stringPreferencesKey("selected_source")
+    private val SHARE_USE_BASE64_KEY = booleanPreferencesKey("share_use_base64")
+    private val SHARE_CLEAR_CLIPBOARD_KEY =
+        booleanPreferencesKey("share_clear_clipboard_on_import")
+
+    fun observeShareUseBase64(): Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { it[SHARE_USE_BASE64_KEY] ?: true }
+
+    fun observeShareClearClipboardOnImport(): Flow<Boolean> = context.dataStore.data
+        .catch { exception ->
+            if (exception is IOException) emit(emptyPreferences()) else throw exception
+        }
+        .map { it[SHARE_CLEAR_CLIPBOARD_KEY] ?: true }
+
+    suspend fun setShareUseBase64(value: Boolean) {
+        context.dataStore.edit { it[SHARE_USE_BASE64_KEY] = value }
+    }
+
+    suspend fun setShareClearClipboardOnImport(value: Boolean) {
+        context.dataStore.edit { it[SHARE_CLEAR_CLIPBOARD_KEY] = value }
+    }
 
     suspend fun saveBaseUrl(url: String) {
         context.dataStore.edit { preferences ->

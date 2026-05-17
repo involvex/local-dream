@@ -12,6 +12,7 @@
     <string name="tag_autocomplete_hint">输入提示词时联想并纠正 tag</string>
     <string name="tag_alias_label">别名</string>
     <string name="tag_correction_label">纠错</string>
+    <string name="tag_embedding_label">嵌入</string>
     <string name="tag_main_dictionary">Tag 词表</string>
     <string name="tag_main_dictionary_hint">未导入。导入一个 tag 词表（如 danbooru.csv）后联想功能才会启用。</string>
     <string name="tag_translation_dictionary">翻译词表（可选）</string>
@@ -32,9 +33,6 @@
     <string name="qteamix_description">动漫Q版风格模型</string>
     <string name="cuteyukimix_description">动漫特化可爱风格</string>
     <string name="absolutereality_description">现实场景生成模型</string>
-    <string name="sd21_description">通用图像生成模型</string>
-    <string name="ponyv55_description">Pony Diffusion系列</string>
-
     <!-- Models -->
     <string name="backend_notify">模型服务运行中</string>
     <string name="backend_notify_title">SD模型后端</string>
@@ -55,24 +53,18 @@
     <string name="no">否</string>
     <string name="about_app">须知</string>
     <string name="must_read">此APP支持在CPU/GPU和部分高通NPU上运行stable diffusion图像生成。\n\n支持在 Hexagon V68 架构及以上的骁龙 NPU 上运行 SD1.5 模型。\n\n支持在骁龙 8 Gen 3 及更新的设备上运行 SDXL 模型。\n\n若您的芯片不在上述范围内，则只能使用 CPU/GPU 运行。\n\n本项目在 https://github.com/xororz/local-dream 开源，可以在github上查看源代码或提交问题</string>
-    <string name="help">help</string>
+    <string name="help">帮助</string>
 
     <!-- Model List Screen -->
     <string name="available_models">可用模型</string>
     <string name="selected_items">已选择 %d 项</string>
-    <string name="download_settings">下载设置</string>
     <string name="download">下载</string>
     <string name="download_from">下载地址</string>
     <string name="download_settings_hint">设置模型下载地址\n默认为https://huggingface.co/\n国内用户可使用镜像https://hf-mirror.com/</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">自定义</string>
-    <string name="model_size">总大小：约%s</string>
     <string name="downloaded">已下载</string>
-    <string name="partially_downloaded">部分已下载</string>
-    <string name="continue_download">继续下载</string>
-    <string name="continue_download_hint">模型"%1$s"已部分下载，需要下载剩余文件才能使用。是否继续？</string>
-    <string name="downloading_file">正在下载第 %1$d/%2$d 个文件：%3$s</string>
     <string name="delete_success">删除成功</string>
     <string name="delete_failed">删除过程出错</string>
     <string name="cannot_download">无法下载</string>
@@ -90,10 +82,6 @@
     <string name="show_process_hint">仅对NPU模型生效。开启后将显示扩散模型的中间生成步骤。这会降低生成速度，仅在好奇图像生成过程时开启，正常情况下请关闭。</string>
     <string name="preview_stride">预览步长</string>
     <string name="preview_stride_hint">每 %d 步更新一次预览（1-10）。</string>
-    <string name="download_patch">下载高分辨率补丁</string>
-    <string name="download_patch_hint">要为模型%2$s下载%1$dx%1$d分辨率补丁吗? 使模型能够生成%1$d分辨率图像</string>
-    <string name="highres_patch">HighRes Patch</string>
-
     <!-- Crop Screen -->
     <string name="crop_image">裁剪图像</string>
     <string name="crop_hint">拖动调整裁剪区域</string>
@@ -101,10 +89,8 @@
     <!-- Inpaint Screen -->
     <string name="set_inpaint_area">设置重绘区域</string>
     <string name="inpaint_hint">在图像上涂抹你想要重绘的区域</string>
-    <string name="brush_size">笔刷大小</string>
     <string name="undo">撤销</string>
     <string name="redo">重做</string>
-    <string name="clear">清除</string>
     <string name="brush_color">笔刷颜色</string>
 
     <!-- Run Screen -->
@@ -115,7 +101,6 @@
     <string name="negative_prompt">负面提示</string>
     <string name="generate_image">生成图像</string>
     <string name="generating">正在生成图像</string>
-    <string name="generation_progress">%d%%</string>
     <string name="no_results">还没有结果哦</string>
     <string name="no_results_hint">请先在提示词页面生成图像</string>
     <string name="go_to_generate">去生成图像</string>
@@ -124,7 +109,6 @@
     <string name="history_tab">历史</string>
     <string name="no_history">暂无生成历史</string>
     <string name="no_history_hint">开始生成图片后会自动保存</string>
-    <string name="recent_100_items">仅显示最近的 100 个项目</string>
     <string name="selected_items_count">已选 %d 项</string>
     <string name="generation_params_title">生成参数</string>
     <string name="use_same_seed_title">使用相同的种子吗？</string>
@@ -135,6 +119,11 @@
     <string name="delete_failed_message">删除失败</string>
     <string name="batch_delete">批量删除</string>
     <string name="batch_delete_confirm">确定要删除选中的 %d 张图片吗？此操作无法撤销。</string>
+    <string name="batch_save">批量保存</string>
+    <string name="batch_save_confirm">将选中的 %d 张图片保存到相册？</string>
+    <string name="batch_saving_progress">正在保存 %1$d / %2$d</string>
+    <string name="saved_count">已保存 %d 张图片</string>
+    <string name="saved_count_with_failed">已保存 %1$d 张，失败 %2$d 张</string>
     <string name="deleted_count">已删除 %d 项</string>
     <string name="deleted_count_with_failed">成功删除 %1$d 项，失败 %2$d 项</string>
     <string name="confirm_exit">确定退出</string>
@@ -147,28 +136,48 @@
     <!-- Parameter Settings -->
     <string name="generation_params">生成参数</string>
     <string name="steps">生成步数: %d</string>
-    <string name="cfg_scale">CFG Scale: %.1f</string>
     <string name="image_size">图像尺寸: %1$dx%2$d</string>
     <string name="random_seed">随机种子 (可选)</string>
     <string name="use_last_seed">使用上次的种子 (%s)</string>
     <string name="batch_count">批次数量: %d</string>
     <string name="reproduce">复制</string>
-    <string name="result_params">步数: %s / CFG: %.1f / 种子: %s"</string>
-    <string name="result_params_2">尺寸: %sx%s / 耗时: %s / %s"</string>
+    <string name="result_params">步数: %s / CFG: %.1f / 种子: %s</string>
+    <string name="result_params_2">尺寸: %sx%s / 耗时: %s / %s</string>
     <string name="params_detail">生成参数详情</string>
     <string name="basic_params">基础参数</string>
+    <string name="basic_model">模型: %s</string>
     <string name="basic_step">步数: %d</string>
     <string name="basic_size">尺寸: %dx%d</string>
     <string name="basic_seed">种子: %s</string>
     <string name="basic_runtime">运行: %s</string>
+    <string name="basic_mode">模式: %s</string>
+    <string name="basic_denoise">降噪强度: %.2f</string>
     <string name="basic_time">耗时: %s</string>
     <string name="opencl_warning">GPU运行时警告：每个分辨率的首次运行会比较慢，这会生成缓存文件。后续运行会快一些。</string>
 
+    <!-- 参数分享 -->
+    <string name="share">分享</string>
+    <string name="share_params_title">分享参数</string>
+    <string name="share_params_hint">勾选要分享的字段，将以 JSON 形式写入剪贴板，便于通过任意方式发送。</string>
+    <string name="share_use_base64">Base64 编码</string>
+    <string name="share_use_base64_hint">使用 Base64 编码。</string>
+    <string name="share_copy_to_clipboard">复制</string>
+    <string name="share_copied">参数已复制到剪贴板</string>
+    <string name="share_field_steps">步数</string>
+    <string name="share_field_cfg">CFG</string>
+    <string name="share_field_seed">种子</string>
+    <string name="share_field_denoise">降噪强度</string>
+    <string name="share_field_mode">模式</string>
+    <string name="import_params_title">应用分享的参数</string>
+    <string name="import_params_hint">在剪贴板中检测到分享的参数，请选择要应用的字段。</string>
+    <string name="import_clear_clipboard">关闭后清除剪贴板</string>
+    <string name="import_clear_clipboard_hint">关闭对话框后（无论应用还是取消）从剪贴板中清除分享内容。</string>
+    <string name="import_apply">应用</string>
+    <string name="import_applied">参数已应用</string>
+
     <!-- Error Messages -->
-    <string name="error_device_not_supported">您的设备暂不支持，请使用CPU版本</string>
     <string name="error_download_failed">下载失败: %s</string>
     <string name="error_request_failed">请求失败: %s</string>
-    <string name="error_generation_failed">生成失败: %s</string>
     <string name="unknown_error">未知错误</string>
 
     <!-- Info Messages -->
@@ -177,7 +186,6 @@
 
     <!-- File Manager -->
     <string name="file_manager">文件管理器</string>
-    <string name="file_manager_desc">管理模型文件</string>
     <string name="delete_file">删除文件</string>
     <string name="delete_file_confirm">确定要删除文件 \"%s\" 吗？</string>
     <string name="file_deleted">文件删除成功</string>
@@ -188,7 +196,6 @@
     <string name="file_count">%d 个文件</string>
 
     <!-- Settings -->
-    <string name="general_settings">常规设置</string>
     <string name="download_source">下载源</string>
     <string name="feature_settings">功能设置</string>
     <string name="file_management">文件管理</string>
@@ -197,7 +204,6 @@
     <string name="add_custom_model">添加自定义模型</string>
     <string name="add_custom_npu_model">添加自定义NPU模型</string>
     <string name="custom_model">自定义模型</string>
-    <string name="custom_npu_model">自定义NPU模型</string>
     <string name="custom_model_name">模型名称</string>
     <string name="custom_model_name_hint">输入模型名称</string>
     <string name="custom_model_id_reserved">该名称与内置模型冲突，请使用其他名称</string>
@@ -219,7 +225,6 @@
     <string name="copying_model_file">复制模型文件中…</string>
     <string name="copying_base_files">复制基础文件中…</string>
     <string name="converting_model">转换模型中…</string>
-    <string name="clip_skip">CLIP Skip</string>
     <string name="clip_skip_hint">设置CLIP跳跃层数 (1或2)</string>
     <string name="lora_files_optional">LoRA 文件 (可选)</string>
     <string name="add_lora_file">添加 LoRA 文件</string>
@@ -237,8 +242,6 @@
     <string name="embedding_deleted">Embedding 删除成功</string>
     <string name="embedding_imported">Embedding 导入成功</string>
     <string name="embedding_import_failed">Embedding 导入失败: %s</string>
-    <string name="select_embedding_file">选择 Embedding 文件</string>
-    <string name="embedding_file_hint">选择一个 safetensors 格式的 embedding 文件</string>
     <string name="only_safetensors_supported">仅支持 .safetensors 文件</string>
 
     <!-- Upscaler -->
@@ -274,4 +277,33 @@
     <string name="resolution">分辨率</string>
     <string name="scheduler">调度器</string>
     <string name="extracting">解压中…</string>
+
+    <!-- History migration -->
+    <string name="migration_title">正在导入历史记录</string>
+    <string name="migration_subtitle">首次启动需要导入旧版本的历史记录,导入完成后会自动进入主界面,请稍候。</string>
+    <string name="migration_progress">%1$d / %2$d</string>
+    <string name="migration_current_model">当前模型: %1$s</string>
+    <string name="migration_failed_title">导入失败</string>
+    <string name="migration_retry">重试</string>
+    <string name="migration_skip">跳过</string>
+    <string name="migration_skip_warning">跳过后旧的历史记录将无法在新的历史浏览中查看。</string>
+
+    <!-- History filter -->
+    <string name="history_filter_apply">应用</string>
+    <string name="history_filter_reset">重置</string>
+    <string name="history_filter_models">模型</string>
+    <string name="history_filter_current_model_only">仅当前模型</string>
+    <string name="history_filter_all_models">所有模型</string>
+    <string name="history_filter_all">全部</string>
+    <string name="history_filter_modes">模式</string>
+    <string name="history_filter_time_range">时间范围</string>
+    <string name="history_filter_time_any">不限</string>
+    <string name="history_filter_size">尺寸</string>
+    <string name="history_filter_scheduler">调度器</string>
+    <string name="history_filter_device">设备</string>
+    <string name="history_filter_prompt_search">提示词包含…</string>
+    <string name="history_filter_sort">排序</string>
+    <string name="history_filter_sort_desc">最新优先</string>
+    <string name="history_filter_sort_asc">最旧优先</string>
+    <string name="history_view_filter">过滤</string>
 </resources>

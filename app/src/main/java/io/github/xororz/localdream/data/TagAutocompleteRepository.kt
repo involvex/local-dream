@@ -730,7 +730,14 @@ class TagAutocompleteRepository private constructor(private val context: Context
             val prefix = text.substring(0, context.trimmedStart)
             val suffix = text.substring(context.segmentEnd)
             val separator = if (suffix.startsWith(",")) "" else ", "
-            val replacement = suggestion.replacementTag.replace('_', ' ') + separator
+            // Embeddings are matched verbatim by filename stem in PromptProcessor;
+            // converting '_' to ' ' would break the lookup.
+            val core = if (suggestion.matchType == TagMatchType.Embedding) {
+                suggestion.replacementTag
+            } else {
+                suggestion.replacementTag.replace('_', ' ')
+            }
+            val replacement = core + separator
             val updated = prefix + replacement + suffix.trimStart()
             return updated to (prefix.length + replacement.length)
         }

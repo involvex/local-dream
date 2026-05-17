@@ -12,6 +12,7 @@
     <string name="tag_autocomplete_hint">Suggest and correct tags while you type prompts</string>
     <string name="tag_alias_label">Alias</string>
     <string name="tag_correction_label">Correction</string>
+    <string name="tag_embedding_label">Embedding</string>
     <string name="tag_main_dictionary">Tag dictionary</string>
     <string name="tag_main_dictionary_hint">Not imported. Suggestions are disabled until you import a CSV (e.g. danbooru.csv).</string>
     <string name="tag_translation_dictionary">Translation dictionary (optional)</string>
@@ -32,9 +33,6 @@
     <string name="qteamix_description">Chibi Style Anime</string>
     <string name="cuteyukimix_description">Cute Style Anime</string>
     <string name="absolutereality_description">Realistic Image Generation</string>
-    <string name="sd21_description">General Image Generation</string>
-    <string name="ponyv55_description">Pony Diffusion Series</string>
-
     <!-- Models -->
     <string name="backend_notify">Model Backend Service Running</string>
     <string name="backend_notify_title">SD Model Backend</string>
@@ -55,24 +53,18 @@
     <string name="no">No</string>
     <string name="about_app">Note</string>
     <string name="must_read">This APP supports running stable diffusion image generation on CPU/GPU and some Qualcomm NPUs.\n\nSD1.5 models are supported on Snapdragon NPUs with Hexagon V68 architecture or newer.\n\nSDXL models are supported on Snapdragon 8 Gen 3 and newer devices.\n\nIf your chip is outside the above scope, you can only run on CPU/GPU.\n\nThis project is open source at https://github.com/xororz/local-dream where you can view the source code or submit issues</string>
-    <string name="help">help</string>
+    <string name="help">Help</string>
 
     <!-- Model List Screen -->
     <string name="available_models">Available Models</string>
     <string name="selected_items">%d Selected</string>
-    <string name="download_settings">Download Settings</string>
     <string name="download">Download</string>
     <string name="download_from">Download From</string>
     <string name="download_settings_hint">Download from huggingface or other mirror url</string>
     <string name="source_huggingface">Hugging Face</string>
     <string name="source_hf_mirror">hf-mirror</string>
     <string name="source_custom">Custom</string>
-    <string name="model_size">Total Size: ~%s</string>
     <string name="downloaded">Downloaded</string>
-    <string name="partially_downloaded">Partially Downloaded</string>
-    <string name="continue_download">Continue Download</string>
-    <string name="continue_download_hint">Model "%1$s" is partially downloaded. Continue downloading the remaining files?</string>
-    <string name="downloading_file">Downloading file %1$d/%2$d: %3$s</string>
     <string name="delete_success">Deleted</string>
     <string name="delete_failed">Error in deletion</string>
     <string name="cannot_download">Cannot Download</string>
@@ -90,10 +82,6 @@
     <string name="show_process_hint">Only works for NPU models. Show intermediate generation steps. This will slow down generation speed. Enable only when curious about the process.</string>
     <string name="preview_stride">Preview Stride</string>
     <string name="preview_stride_hint">Update preview every %d steps (1-10).</string>
-    <string name="download_patch">Download High Resolution Patch</string>
-    <string name="download_patch_hint">Download %1$dx%1$d high resolution patch for %2$s? This will enable %1$dpx generation.</string>
-    <string name="highres_patch">HighRes Patch</string>
-
     <!-- Crop Screen -->
     <string name="crop_image">Crop Image</string>
     <string name="crop_hint">Drag to adjust the crop area</string>
@@ -101,10 +89,8 @@
     <!-- Inpaint Screen -->
     <string name="set_inpaint_area">Set Inpaint Area</string>
     <string name="inpaint_hint">Paint over the areas you want to inpaint</string>
-    <string name="brush_size">Brush Size</string>
     <string name="undo">Undo</string>
     <string name="redo">Redo</string>
-    <string name="clear">Clear</string>
     <string name="brush_color">Brush Color</string>
 
     <!-- Run Screen -->
@@ -115,7 +101,6 @@
     <string name="negative_prompt">Negative Prompt</string>
     <string name="generate_image">Generate</string>
     <string name="generating">Generating image</string>
-    <string name="generation_progress">%d%%</string>
     <string name="no_results">No results yet</string>
     <string name="no_results_hint">Create an image first~</string>
     <string name="go_to_generate">Create</string>
@@ -124,7 +109,6 @@
     <string name="history_tab">History</string>
     <string name="no_history">No generation history</string>
     <string name="no_history_hint">History will be saved after generation</string>
-    <string name="recent_100_items">Only showing recent 100 items</string>
     <string name="selected_items_count">Selected %d items</string>
     <string name="generation_params_title">Generation Parameters</string>
     <string name="use_same_seed_title">Use same seed?</string>
@@ -135,6 +119,11 @@
     <string name="delete_failed_message">Delete failed</string>
     <string name="batch_delete">Batch Delete</string>
     <string name="batch_delete_confirm">Are you sure you want to delete %d selected images? This action cannot be undone.</string>
+    <string name="batch_save">Batch Save</string>
+    <string name="batch_save_confirm">Save %d selected images to gallery?</string>
+    <string name="batch_saving_progress">Saving %1$d / %2$d</string>
+    <string name="saved_count">Saved %d images</string>
+    <string name="saved_count_with_failed">Saved %1$d images, %2$d failed</string>
     <string name="deleted_count">Deleted %d items</string>
     <string name="deleted_count_with_failed">Successfully deleted %1$d items, failed %2$d items</string>
     <string name="confirm_exit">Confirm to Exit</string>
@@ -147,28 +136,48 @@
     <!-- Parameter Settings -->
     <string name="generation_params">Generation Params</string>
     <string name="steps">Steps: %d</string>
-    <string name="cfg_scale">CFG Scale: %.1f</string>
     <string name="image_size">Image Size: %1$dx%2$d</string>
     <string name="random_seed">Random Seed (Optional)</string>
     <string name="use_last_seed">Use Last Seed (%s)</string>
     <string name="batch_count">Batch Count: %d</string>
     <string name="reproduce">Reproduce</string>
-    <string name="result_params">steps: %s / CFG: %.1f / seed: %s"</string>
-    <string name="result_params_2">size: %sx%s / time: %s / %s"</string>
+    <string name="result_params">steps: %s / CFG: %.1f / seed: %s</string>
+    <string name="result_params_2">size: %sx%s / time: %s / %s</string>
     <string name="params_detail">Details</string>
     <string name="basic_params">Basic</string>
+    <string name="basic_model">Model: %s</string>
     <string name="basic_step">Steps: %d</string>
     <string name="basic_size">Size: %dx%d</string>
     <string name="basic_seed">Seed: %s</string>
     <string name="basic_runtime">Runtime: %s</string>
+    <string name="basic_mode">Mode: %s</string>
+    <string name="basic_denoise">Denoise strength: %.2f</string>
     <string name="basic_time">Time: %s</string>
     <string name="opencl_warning">GPU runtime warning: The first run at each resolution will be slow as it generates cache files. Subsequent runs will be much faster.</string>
 
+    <!-- Parameter Share -->
+    <string name="share">Share</string>
+    <string name="share_params_title">Share Parameters</string>
+    <string name="share_params_hint">Pick the fields to copy. The result is written to the clipboard so you can paste it anywhere.</string>
+    <string name="share_use_base64">Base64 encoding</string>
+    <string name="share_use_base64_hint">Encode the payload with Base64.</string>
+    <string name="share_copy_to_clipboard">Copy</string>
+    <string name="share_copied">Parameters copied to clipboard</string>
+    <string name="share_field_steps">Steps</string>
+    <string name="share_field_cfg">CFG</string>
+    <string name="share_field_seed">Seed</string>
+    <string name="share_field_denoise">Denoise strength</string>
+    <string name="share_field_mode">Mode</string>
+    <string name="import_params_title">Apply Shared Parameters</string>
+    <string name="import_params_hint">Shared parameters were found on the clipboard. Choose which fields to apply.</string>
+    <string name="import_clear_clipboard">Clear clipboard after closing</string>
+    <string name="import_clear_clipboard_hint">Remove the shared payload from the clipboard after closing this dialog, whether you apply or cancel.</string>
+    <string name="import_apply">Apply</string>
+    <string name="import_applied">Parameters applied</string>
+
     <!-- Error Messages -->
-    <string name="error_device_not_supported">Your device is not supported yet, please use CPU version</string>
     <string name="error_download_failed">Download failed: %s</string>
     <string name="error_request_failed">Request failed: %s</string>
-    <string name="error_generation_failed">Generation failed: %s</string>
     <string name="unknown_error">unknown error</string>
 
     <!-- Info Messages -->
@@ -177,7 +186,6 @@
 
     <!-- File Manager -->
     <string name="file_manager">File Manager</string>
-    <string name="file_manager_desc">Manage model files</string>
     <string name="delete_file">Delete File</string>
     <string name="delete_file_confirm">Are you sure you want to delete the file \"%s\"?</string>
     <string name="file_deleted">File deleted successfully</string>
@@ -188,7 +196,6 @@
     <string name="file_count">%d files</string>
 
     <!-- Settings -->
-    <string name="general_settings">General Settings</string>
     <string name="download_source">Download Source</string>
     <string name="feature_settings">Feature Settings</string>
     <string name="file_management">File Management</string>
@@ -197,7 +204,6 @@
     <string name="add_custom_model">Add Custom Model</string>
     <string name="add_custom_npu_model">Add Custom NPU Model</string>
     <string name="custom_model">Custom Model</string>
-    <string name="custom_npu_model">Custom NPU Model</string>
     <string name="custom_model_name">Model Name</string>
     <string name="custom_model_name_hint">Enter model name</string>
     <string name="custom_model_id_reserved">This name conflicts with a built-in model. Please choose a different one.</string>
@@ -219,7 +225,6 @@
     <string name="copying_model_file">Copying model file…</string>
     <string name="copying_base_files">Copying base files…</string>
     <string name="converting_model">Converting model…</string>
-    <string name="clip_skip">CLIP Skip</string>
     <string name="clip_skip_hint">Set CLIP skip layers (1 or 2)</string>
     <string name="lora_files_optional">LoRA Files (Optional)</string>
     <string name="add_lora_file">Add LoRA File</string>
@@ -237,8 +242,6 @@
     <string name="embedding_deleted">Embedding deleted successfully</string>
     <string name="embedding_imported">Embedding imported successfully</string>
     <string name="embedding_import_failed">Embedding import failed: %s</string>
-    <string name="select_embedding_file">Select Embedding File</string>
-    <string name="embedding_file_hint">Select a safetensors embedding file</string>
     <string name="only_safetensors_supported">Only .safetensors files are supported</string>
 
     <!-- Upscaler -->
@@ -274,4 +277,33 @@
     <string name="resolution">Resolution</string>
     <string name="scheduler">Scheduler</string>
     <string name="extracting">Extracting…</string>
+
+    <!-- History migration -->
+    <string name="migration_title">Importing history</string>
+    <string name="migration_subtitle">First launch needs to import your existing history records. Please keep the app open until this finishes.</string>
+    <string name="migration_progress">%1$d / %2$d</string>
+    <string name="migration_current_model">Current model: %1$s</string>
+    <string name="migration_failed_title">Import failed</string>
+    <string name="migration_retry">Retry</string>
+    <string name="migration_skip">Skip</string>
+    <string name="migration_skip_warning">Skipping will leave old history records unavailable in the new history view.</string>
+
+    <!-- History filter -->
+    <string name="history_filter_apply">Apply</string>
+    <string name="history_filter_reset">Reset</string>
+    <string name="history_filter_models">Models</string>
+    <string name="history_filter_current_model_only">Current model only</string>
+    <string name="history_filter_all_models">All models</string>
+    <string name="history_filter_all">All</string>
+    <string name="history_filter_modes">Modes</string>
+    <string name="history_filter_time_range">Time range</string>
+    <string name="history_filter_time_any">Any time</string>
+    <string name="history_filter_size">Size</string>
+    <string name="history_filter_scheduler">Scheduler</string>
+    <string name="history_filter_device">Device</string>
+    <string name="history_filter_prompt_search">Prompt contains…</string>
+    <string name="history_filter_sort">Sort</string>
+    <string name="history_filter_sort_desc">Newest first</string>
+    <string name="history_filter_sort_asc">Oldest first</string>
+    <string name="history_view_filter">Filter</string>
 </resources>

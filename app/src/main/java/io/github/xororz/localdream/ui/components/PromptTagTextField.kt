@@ -7,14 +7,18 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -114,12 +118,25 @@ fun PromptTagTextField(
         val widthDp = with(density) { anchorWidthPx.toDp() }
         val gapDp = 8.dp
         val gapPx = with(density) { gapDp.toPx() }
-        val availableAboveDp = with(density) {
-            (anchorTopPx - gapPx).coerceAtLeast(0f).toDp()
+
+        // Insets observed live so the popup tracks IME open/close animations.
+        val imeBottomPx = WindowInsets.ime.getBottom(density)
+        val statusTopPx = WindowInsets.statusBars.getTop(density)
+        val navBottomPx = WindowInsets.navigationBars.getBottom(density)
+        val bottomInsetPx = maxOf(imeBottomPx, navBottomPx)
+
+        // Space above the field that is actually visible (excludes the status bar).
+        val availableAbovePx = (anchorTopPx - statusTopPx - gapPx).coerceAtLeast(0f)
+        val maxHeightDp = with(density) {
+            minOf(280.dp, availableAbovePx.toDp())
         }
-        val maxHeightDp = minOf(280.dp, availableAboveDp)
         Popup(
-            popupPositionProvider = remember { AnchorPositionProvider() },
+            popupPositionProvider = remember(statusTopPx, bottomInsetPx) {
+                AnchorPositionProvider(
+                    safeTopPx = statusTopPx,
+                    bottomInsetPx = bottomInsetPx
+                )
+            },
             properties = PopupProperties(
                 focusable = false,
                 dismissOnBackPress = true,
@@ -133,13 +150,15 @@ fun PromptTagTextField(
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
             ) {
-                Column(
+                LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
                         .heightIn(max = maxHeightDp)
-                        .verticalScroll(rememberScrollState())
                 ) {
-                    suggestions.forEach { suggestion ->
+                    items(
+                        items = suggestions,
+                        key = { it.replacementTag }
+                    ) { suggestion ->
                         SuggestionRow(
                             suggestion = suggestion,
                             highlightQuery = highlightQuery,
@@ -158,7 +177,13 @@ private fun SuggestionRow(
     highlightQuery: String?,
     onClick: () -> Unit
 ) {
-    val displayPrimary = suggestion.primaryText.replace('_', ' ')
+    // Embedding names round-trip into the prompt verbatim; spaces would break
+    // the lookup in PromptProcessor (it keys on the lowercase filename stem).
+    val displayPrimary = if (suggestion.matchType == TagMatchType.Embedding) {
+        suggestion.primaryText
+    } else {
+        suggestion.primaryText.replace('_', ' ')
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -170,7 +195,11 @@ private fun SuggestionRow(
             modifier = Modifier
                 .size(8.dp)
                 .background(
-                    color = categoryColor(suggestion.category),
+                    color = if (suggestion.matchType == TagMatchType.Embedding) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        categoryColor(suggestion.category)
+                    },
                     shape = CircleShape
                 )
         )
@@ -213,14 +242,17 @@ private fun MatchTypeBadge(matchType: TagMatchType) {
     val label = when (matchType) {
         TagMatchType.Alias -> stringResource(R.string.tag_alias_label)
         TagMatchType.Correction -> stringResource(R.string.tag_correction_label)
+        TagMatchType.Embedding -> stringResource(R.string.tag_embedding_label)
         else -> return
     }
     val container = when (matchType) {
         TagMatchType.Correction -> MaterialTheme.colorScheme.errorContainer
+        TagMatchType.Embedding -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.secondaryContainer
     }
     val onContainer = when (matchType) {
         TagMatchType.Correction -> MaterialTheme.colorScheme.onErrorContainer
+        TagMatchType.Embedding -> MaterialTheme.colorScheme.onPrimaryContainer
         else -> MaterialTheme.colorScheme.onSecondaryContainer
     }
     Spacer(Modifier.width(8.dp))
@@ -273,7 +305,10 @@ private fun highlightSubstring(text: String, query: String?): AnnotatedString {
     }
 }
 
-private class AnchorPositionProvider : PopupPositionProvider {
+private class AnchorPositionProvider(
+    private val safeTopPx: Int,
+    private val bottomInsetPx: Int
+) : PopupPositionProvider {
     override fun calculatePosition(
         anchorBounds: IntRect,
         windowSize: IntSize,
@@ -281,12 +316,28 @@ private class AnchorPositionProvider : PopupPositionProvider {
         popupContentSize: IntSize
     ): IntOffset {
         val gap = 8
+        // Visible bottom is the lowest screen Y that is not occluded by the IME
+        // or the navigation bar. Falling back to windowSize.height keeps the math
+        // safe if insets are reported as 0 on some OEMs.
+        val visibleBottom = (windowSize.height - bottomInsetPx).coerceAtLeast(0)
+
         val aboveY = anchorBounds.top - popupContentSize.height - gap
         val belowY = anchorBounds.bottom + gap
+
         val y = when {
-            aboveY >= 0 -> aboveY
-            belowY + popupContentSize.height <= windowSize.height -> belowY
-            else -> aboveY.coerceAtLeast(0)
+            // Prefer above when it sits below the safe top — this is the normal
+            // path; the popup never overlaps the caret because the height was
+            // already capped to the available space above.
+            aboveY >= safeTopPx -> aboveY
+            // Otherwise drop below only when it fully fits inside the visible
+            // region (i.e. above the keyboard / nav bar). Without this guard
+            // the popup can render behind the IME on edge-to-edge windows
+            // where windowSize.height is the full screen.
+            belowY + popupContentSize.height <= visibleBottom -> belowY
+            // Last resort: clamp above the field as high as the safe top allows.
+            // heightIn already prevents the popup from being taller than the
+            // space above, so this still avoids covering the caret.
+            else -> aboveY.coerceAtLeast(safeTopPx)
         }
         val x = anchorBounds.left.coerceIn(
             0,
