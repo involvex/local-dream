@@ -130,6 +130,7 @@
     <string name="confirm_exit_hint">Generation in progress, Are you sure to Exit?</string>
     <string name="reset">Reset</string>
     <string name="reset_hint">Reset all parameters? This action cannot be undone. </string>
+    <string name="scenarios">Scenario Presets</string>
     <string name="media_permission_hint">Media permission is needed for img2img generation</string>
     <string name="backend_failed">Backend start failed. Maybe your device is not supported.</string>
 
@@ -141,13 +142,13 @@
     <string name="use_last_seed">Use Last Seed (%s)</string>
     <string name="batch_count">Batch Count: %d</string>
     <string name="reproduce">Reproduce</string>
-    <string name="result_params">steps: %s / CFG: %.1f / seed: %s</string>
-    <string name="result_params_2">size: %sx%s / time: %s / %s</string>
+    <string name="result_params">steps: %1$s / CFG: %2$.1f / seed: %3$s</string>
+    <string name="result_params_2">size: %1$sx%2$s / time: %3$s / %4$s</string>
     <string name="params_detail">Details</string>
     <string name="basic_params">Basic</string>
     <string name="basic_model">Model: %s</string>
     <string name="basic_step">Steps: %d</string>
-    <string name="basic_size">Size: %dx%d</string>
+    <string name="basic_size">Size: %1$dx%2$d</string>
     <string name="basic_seed">Seed: %s</string>
     <string name="basic_runtime">Runtime: %s</string>
     <string name="basic_mode">Mode: %s</string>

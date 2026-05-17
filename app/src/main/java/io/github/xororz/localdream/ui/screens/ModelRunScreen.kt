@@ -176,6 +176,7 @@ import io.github.xororz.localdream.data.PromptTemplate
 import io.github.xororz.localdream.data.PromptTemplateCategory
 import io.github.xororz.localdream.data.PromptTemplates
 import io.github.xororz.localdream.utils.PromptVariationGenerator
+import io.github.xororz.localdream.data.ScenarioPresets
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
@@ -460,6 +461,7 @@ fun ModelRunScreen(
     var isCheckingBackend by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
     var showParametersDialog by remember { mutableStateOf(false) }
+    var showScenarioDialog by remember { mutableStateOf(false) }
     var pagerState = rememberPagerState(initialPage = 0, pageCount = { 3 })
     var generationStartTime by remember { mutableStateOf<Long?>(null) }
     var hasInitialized by remember { mutableStateOf(false) }
@@ -483,6 +485,17 @@ fun ModelRunScreen(
     val preferences = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
     val useImg2img = preferences.getBoolean("use_img2img", true)
     val enableTagAutocomplete = preferences.getBoolean("enable_tag_autocomplete", true)
+    var sdxlLowRam by remember {
+        mutableStateOf(
+            preferences.getBoolean("sdxl_lowram", true).also {
+                if (!preferences.contains("sdxl_lowram")) {
+                    preferences.edit {
+                        putBoolean("sdxl_lowram", true)
+                    }
+                }
+            }
+        )
+    }
     val tagSuggestionCount = 100
     val tagAutocompleteRepository = remember { TagAutocompleteRepository.getInstance(context) }
     val tagDictState by tagAutocompleteRepository.state.collectAsState()
@@ -1528,6 +1541,15 @@ fun ModelRunScreen(
                                         Icons.Default.AutoFixHigh,
                                         contentDescription = stringResource(R.string.prompt_variation),
                                         modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                                FilledTonalButton(
+                                    onClick = { showScenarioDialog = true },
+                                    modifier = Modifier.height(36.dp)
+                                ) {
+                                    Text(
+                                        stringResource(R.string.scenarios),
+                                        style = MaterialTheme.typography.bodySmall
                                     )
                                 }
                                 if (useImg2img) {
