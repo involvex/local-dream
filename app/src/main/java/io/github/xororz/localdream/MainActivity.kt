@@ -1,6 +1,7 @@
 package io.github.xororz.localdream
 
 import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -14,6 +15,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
+import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -21,16 +24,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import io.github.xororz.localdream.data.MigrationState
 import io.github.xororz.localdream.navigation.Screen
+import io.github.xororz.localdream.ui.screens.ImageCompareScreen
 import io.github.xororz.localdream.ui.screens.MigrationScreen
 import io.github.xororz.localdream.ui.screens.ModelListScreen
 import io.github.xororz.localdream.ui.screens.ModelRunScreen
-import io.github.xororz.localdream.ui.screens.UpscaleScreen
-import io.github.xororz.localdream.ui.screens.ImageCompareScreen
-import io.github.xororz.localdream.ui.screens.TagBrowserScreen
 import io.github.xororz.localdream.ui.screens.ScenarioManagementScreen
+import io.github.xororz.localdream.ui.screens.TagBrowserScreen
+import io.github.xororz.localdream.ui.screens.UpscaleScreen
 import io.github.xororz.localdream.ui.theme.LocalDreamTheme
-import androidx.core.content.ContextCompat
-import android.content.pm.PackageManager
 
 class MainActivity : ComponentActivity() {
     private val requestStoragePermissionLauncher = registerForActivityResult(
@@ -213,3 +214,5 @@ private fun AppContent() {
         }
     }
 }
+
+

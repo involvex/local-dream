@@ -278,4 +278,6 @@
     <string name="history_filter_sort_desc">新しい順</string>
     <string name="history_filter_sort_asc">古い順</string>
     <string name="history_view_filter">フィルター</string>
+    <string name="not_downloaded">not downloaded</string>
+    <string name="select_upscaler">Select Upscaler</string>
 </resources>

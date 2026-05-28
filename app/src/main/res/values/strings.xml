@@ -338,4 +338,6 @@
     <string name="swap_images">Swap sides</string>
     <string name="left_image">Left image</string>
     <string name="right_image">Right image</string>
+    <string name="not_downloaded">not downloaded</string>
+    <string name="select_upscaler">Select Upscaler</string>
 </resources>

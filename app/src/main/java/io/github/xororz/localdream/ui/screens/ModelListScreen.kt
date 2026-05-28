@@ -1,89 +1,164 @@
 package io.github.xororz.localdream.ui.screens
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.runtime.*
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.navigation.NavController
-import android.content.ContentValues
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import io.github.xororz.localdream.data.*
-import io.github.xororz.localdream.navigation.Screen
-import io.github.xororz.localdream.service.ModelDownloadService
-import io.github.xororz.localdream.utils.LogCapture
-import java.io.FileOutputStream
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
-import kotlinx.coroutines.launch
-import java.text.DecimalFormat
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.res.stringResource
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.foundation.text.ClickableText
-import androidx.compose.ui.text.style.TextDecoration
-import io.github.xororz.localdream.R
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.material.icons.automirrored.filled.Help
-import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
-import androidx.compose.ui.draw.clip
-import androidx.core.content.edit
-import java.io.File
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import android.net.Uri
 import android.provider.OpenableColumns
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Folder
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.documentfile.provider.DocumentFile
-import java.util.zip.ZipInputStream
-import java.io.BufferedOutputStream
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.ClickableText
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Help
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AspectRatio
+import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CloudDownload
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.SearchOff
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Update
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ElevatedCard
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.LargeTopAppBar
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRowDefaults.SecondaryIndicator
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.core.content.edit
 import androidx.core.net.toUri
+import androidx.documentfile.provider.DocumentFile
+import androidx.navigation.NavController
+import io.github.xororz.localdream.R
+import io.github.xororz.localdream.data.DownloadProgress
+import io.github.xororz.localdream.data.GenerationPreferences
+import io.github.xororz.localdream.data.ImportResult
+import io.github.xororz.localdream.data.Model
+import io.github.xororz.localdream.data.ModelRepository
+import io.github.xororz.localdream.data.TagAutocompleteRepository
+import io.github.xororz.localdream.navigation.Screen
+import io.github.xororz.localdream.service.ModelDownloadService
+import io.github.xororz.localdream.utils.LogCapture
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedOutputStream
+import java.io.File
+import java.io.FileOutputStream
+import java.text.DecimalFormat
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.zip.ZipInputStream
 
 data class LoRAFile(
     val uri: Uri,
@@ -717,34 +792,37 @@ fun ModelListScreen(
                 .padding(paddingValues)
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
         ) {
-            TabRow(
+            SecondaryTabRow(
                 selectedTabIndex = pagerState.currentPage,
-                indicator = { tabPositions ->
+                modifier = Modifier.fillMaxWidth(),
+                indicator = {
                     SecondaryIndicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
+                        modifier = Modifier.tabIndicatorOffset(
+                            selectedTabIndex = pagerState.currentPage
+                        ),
                         color = MaterialTheme.colorScheme.primary
                     )
                 },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                tabTitles.forEachIndexed { index, title ->
-                    Tab(
-                        selected = pagerState.currentPage == index,
-                        onClick = {
-                            scope.launch {
-                                pagerState.animateScrollToPage(index)
+                divider = { HorizontalDivider() },
+                tabs = {
+                    tabTitles.forEachIndexed { index, title ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = {
+                                scope.launch {
+                                    pagerState.animateScrollToPage(index)
+                                }
+                            },
+                            text = {
+                                Text(
+                                    text = title,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
+                                )
                             }
-                        },
-                        text = {
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = if (pagerState.currentPage == index) FontWeight.Bold else FontWeight.Normal
-                            )
-                        }
-                    )
-                }
-            }
+                        )
+                    }
+                })
 
             HorizontalPager(
                 state = pagerState,
@@ -903,7 +981,7 @@ fun ModelListScreen(
                         title = { Text(stringResource(R.string.settings)) },
                         navigationIcon = {
                             IconButton(onClick = { showSettingsDialog = false }) {
-                                Icon(Icons.Default.ArrowBack, stringResource(R.string.back))
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.back))
                             }
                         },
                         colors = TopAppBarDefaults.topAppBarColors(
@@ -967,7 +1045,7 @@ fun ModelListScreen(
                                     readOnly = selectedSource != "custom",
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .menuAnchor()
+                                        .menuAnchor(type = ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                                         .focusRequester(focusRequester)
                                         .onFocusChanged { focusState ->
                                             if (!focusState.isFocused && selectedSource == "custom") {
@@ -1660,7 +1738,7 @@ fun ModelListScreen(
                         modifier = Modifier.fillMaxWidth(0.8f)
                     ) {
                         LinearProgressIndicator(
-                            progress = progress.progress,
+                            progress = { progress.progress },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(8.dp)
@@ -1704,7 +1782,6 @@ fun ModelListScreen(
         }
     }
 }
-
 private fun formatBytes(bytes: Long): String {
     return when {
         bytes < 1024 -> "$bytes B"
@@ -2081,7 +2158,7 @@ private fun FileManagerDialog(
                         modifier = Modifier.size(24.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.back_to_folders),
                             modifier = Modifier.size(20.dp)
                         )
@@ -2238,7 +2315,7 @@ private fun FileManagerDialog(
                                             modifier = Modifier.weight(1f)
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.InsertDriveFile,
+                                                imageVector = Icons.AutoMirrored.Filled.InsertDriveFile,
                                                 contentDescription = null,
                                                 tint = MaterialTheme.colorScheme.secondary
                                             )

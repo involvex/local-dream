@@ -163,6 +163,7 @@ import io.github.xororz.localdream.data.DownloadProgress
 import io.github.xororz.localdream.data.GenerationPreferences
 import io.github.xororz.localdream.data.GenerationMode
 import io.github.xororz.localdream.data.HistoryFilter
+
 import io.github.xororz.localdream.data.HistoryItem
 import io.github.xororz.localdream.data.HistoryManager
 import io.github.xororz.localdream.data.ModelRepository
@@ -214,7 +215,6 @@ import android.graphics.Rect as AndroidRect
 import androidx.core.graphics.scale
 import androidx.core.content.edit
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import kotlinx.coroutines.coroutineScope
 
 
 private fun checkStoragePermission(context: Context): Boolean {
@@ -317,23 +317,7 @@ private suspend fun checkBackendHealth(
     }
 }
 
-@Immutable
-data class GenerationParameters(
-    val steps: Int,
-    val cfg: Float,
-    val seed: Long?,
-    val prompt: String,
-    val negativePrompt: String,
-    val generationTime: String?,
-    val width: Int,
-    val height: Int,
-    val runOnCpu: Boolean,
-    val denoiseStrength: Float = 0.6f,
-    val useOpenCL: Boolean = false,
-    val scheduler: String = "dpm",
-    val mode: GenerationMode = GenerationMode.UNKNOWN,
-    val batchCount: Int = 1,
-)
+
 
 @SuppressLint("DefaultLocale")
 @OptIn(ExperimentalMaterial3Api::class)
