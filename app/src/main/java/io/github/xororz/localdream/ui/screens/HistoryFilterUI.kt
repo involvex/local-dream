@@ -218,7 +218,8 @@ fun HistoryFilterSheet(
             }
 
             Section(stringResource(R.string.history_filter_time_range)) {
-                val df = remember { SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()) }
+                val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
+                val df = remember(locale) { SimpleDateFormat("yyyy-MM-dd", locale) }
                 val label = if (draft.from != null || draft.to != null) {
                     val a = draft.from?.let { df.format(Date(it)) } ?: "—"
                     val b = draft.to?.let { df.format(Date(it)) } ?: "—"

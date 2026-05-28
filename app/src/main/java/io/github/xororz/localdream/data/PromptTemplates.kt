@@ -7,6 +7,7 @@ enum class PromptTemplateCategory {
     REALISTIC,
     LANDSCAPE,
     PORTRAIT,
+    NSFW_TEMPLATES,
     CUSTOM
 }
 
@@ -116,8 +117,25 @@ object PromptTemplates {
         )
     )
 
+    val NSFW_TEMPLATES = listOf(
+        PromptTemplate(
+            id = "nsfw_couch_play",
+            name = "Couch Play",
+            category = PromptTemplateCategory.CUSTOM,
+            prompt = "masterpiece, best quality, 1girl, solo, wearing lingerie, lying on a plush couch, playing with herself, hands between legs, intimate pose, soft room lighting, high detail, photorealistic, cinematic shot",
+            negativePrompt = "lowres, bad anatomy, bad hands, clothing, dress, skirt, pants, fully clothed, blurry, distorted, low quality, worst quality, text, watermark"
+        ),
+        PromptTemplate(
+            id = "nsfw_bedtime_tease",
+            name = "Bedtime Tease",
+            category = PromptTemplateCategory.CUSTOM,
+            prompt = "masterpiece, best quality, 1girl, solo, wearing lace lingerie, lying on bed, seductive look, messy hair, pillow, warm ambient light, highly detailed, raw photo",
+            negativePrompt = "lowres, bad anatomy, bad hands, clothing, fully clothed, blurry, distorted, low quality, worst quality, text, watermark"
+        )
+    )
+
     fun getAllTemplates(): List<PromptTemplate> =
-        ANIME_TEMPLATES + REALISTIC_TEMPLATES + LANDSCAPE_TEMPLATES + PORTRAIT_TEMPLATES
+        ANIME_TEMPLATES + REALISTIC_TEMPLATES + LANDSCAPE_TEMPLATES + PORTRAIT_TEMPLATES + NSFW_TEMPLATES
 
     fun getTemplatesByCategory(category: PromptTemplateCategory): List<PromptTemplate> =
         when (category) {
@@ -125,7 +143,8 @@ object PromptTemplates {
             PromptTemplateCategory.REALISTIC -> REALISTIC_TEMPLATES
             PromptTemplateCategory.LANDSCAPE -> LANDSCAPE_TEMPLATES
             PromptTemplateCategory.PORTRAIT -> PORTRAIT_TEMPLATES
-            PromptTemplateCategory.CUSTOM -> emptyList()
+            PromptTemplateCategory.NSFW_TEMPLATES -> NSFW_TEMPLATES
+            PromptTemplateCategory.CUSTOM -> NSFW_TEMPLATES
         }
 
     fun getTemplateById(id: String): PromptTemplate? =

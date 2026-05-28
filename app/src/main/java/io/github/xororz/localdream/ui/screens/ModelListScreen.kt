@@ -417,7 +417,7 @@ fun ModelListScreen(
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.US)
+                    val timestamp = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", java.util.Locale.US)
                         .format(Date())
                     val filename = "local_dream_log_$timestamp.log"
                     scope.launch(Dispatchers.IO) {

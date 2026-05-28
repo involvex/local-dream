@@ -39,4 +39,7 @@ interface HistoryDao {
 
     @Query("SELECT DISTINCT (width || 'x' || height) FROM generation_history ORDER BY width * height DESC")
     fun observeKnownSizes(): Flow<List<String>>
+
+    // Trigger regeneration
+    fun dummy() {}
 }

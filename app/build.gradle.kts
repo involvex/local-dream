@@ -1,19 +1,20 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "io.github.xororz.localdream"
-    compileSdk = 35
-
+    compileSdk = 37
+    lint {
+        baseline = file("lint-baseline.xml")
+    }
     defaultConfig {
         applicationId = "io.github.xororz.localdream"
         minSdk = 28
 //        minSdk = 31
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 64
         versionName = "2.5.1"
 
@@ -62,8 +63,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+        }
     }
     buildFeatures {
         compose = true
@@ -88,12 +91,11 @@ android {
             versionNameSuffix = "_with_filter"
         }
     }
-    applicationVariants.all {
-        val variant = this
-        variant.outputs.all {
-            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
-            val flavorName = variant.flavorName
-            output.outputFileName = "LocalDream_armv8a_${variant.versionName}.apk"
+    androidComponents {
+        onVariants(selector().all()) { variant ->
+            variant.outputs.forEach { output ->
+                output.outputFileName.set("LocalDream_armv8a_${variant.name}.apk")
+            }
         }
     }
 }
@@ -117,6 +119,7 @@ dependencies {
     implementation(libs.cropify)
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.documentfile)
     ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.junit)

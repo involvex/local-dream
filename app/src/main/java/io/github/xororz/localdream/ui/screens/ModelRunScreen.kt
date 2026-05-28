@@ -3204,10 +3204,11 @@ fun ModelRunScreen(
                                             alpha = 0.8f
                                         )
                                     ) {
+                                        val locale = androidx.compose.ui.platform.LocalLocale.current.platformLocale
                                         Text(
                                             text = java.text.SimpleDateFormat(
                                                 "MM/dd HH:mm",
-                                                java.util.Locale.getDefault()
+                                                locale
                                             )
                                                 .format(java.util.Date(item.timestamp)),
                                             style = MaterialTheme.typography.labelSmall,
@@ -4507,6 +4508,7 @@ fun ModelRunScreen(
                                     PromptTemplateCategory.REALISTIC -> stringResource(R.string.template_category_realistic)
                                     PromptTemplateCategory.LANDSCAPE -> stringResource(R.string.template_category_landscape)
                                     PromptTemplateCategory.PORTRAIT -> stringResource(R.string.template_category_portrait)
+                                    PromptTemplateCategory.NSFW_TEMPLATES -> stringResource( id = R.string.template_category_custom)
                                     PromptTemplateCategory.CUSTOM -> ""
                                 },
                                 style = MaterialTheme.typography.titleSmall,

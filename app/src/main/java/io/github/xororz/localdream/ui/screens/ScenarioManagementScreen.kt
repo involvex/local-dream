@@ -188,6 +188,16 @@ private fun ScenarioEditDialog(
 ) {
     var name by remember { mutableStateOf(scenario?.name ?: "") }
     var tags by remember { mutableStateOf(scenario?.tags ?: "") }
+    var showTemplateMenu by remember { mutableStateOf(false) }
+
+    val templates = remember {
+        listOf(
+            "Anime" to "anime, high quality, masterpiece, vivid colors",
+            "Realistic" to "photorealistic, 8k, raw photo, highly detailed",
+            "Landscape" to "scenic, cinematic, breathtaking, beautiful environment",
+            "Portrait" to "portrait, close-up, sharp focus, natural lighting"
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -201,12 +211,38 @@ private fun ScenarioEditDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+                
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { showTemplateMenu = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Select Template")
+                    }
+                    DropdownMenu(
+                        expanded = showTemplateMenu,
+                        onDismissRequest = { showTemplateMenu = false }
+                    ) {
+                        templates.forEach { (templateName, templateTags) ->
+                            DropdownMenuItem(
+                                text = { Text(templateName) },
+                                onClick = {
+                                    if (name.isBlank()) name = templateName
+                                    tags = templateTags
+                                    showTemplateMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+
                 OutlinedTextField(
                     value = tags,
                     onValueChange = { tags = it },
                     label = { Text(stringResource(R.string.scenario_tags)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
+                    minLines = 3,
+                    maxLines = 5
                 )
             }
         },
