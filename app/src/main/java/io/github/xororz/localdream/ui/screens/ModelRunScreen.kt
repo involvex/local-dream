@@ -1,6 +1,8 @@
 package io.github.xororz.localdream.ui.screens
 
 import android.Manifest
+import io.github.xororz.localdream.data.ModelPreset
+import io.github.xororz.localdream.data.defaultPresets
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -1500,7 +1502,6 @@ fun ModelRunScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1518,6 +1519,29 @@ fun ModelRunScreen(
                         modifier = Modifier.padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        // Presets Section
+                        Text(
+                            "Presets",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(defaultPresets) { preset ->
+                                FilterChip(
+                                    selected = false, // Simplified for now; would need state tracking
+                                    onClick = {
+                                        steps = preset.steps.toFloat()
+                                        cfg = preset.cfg
+                                        scheduler = preset.scheduler
+                                        saveAllFields()
+                                    },
+                                    label = { Text(preset.name) }
+                                )
+                            }
+                        }
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -4934,5 +4958,13 @@ private fun PromptCountLabel(label: String, count: Int, max: Int) {
         Text(label)
         Spacer(Modifier.width(6.dp))
         Text("$count/$max")
+    }
+}
+
+@androidx.compose.ui.tooling.preview.Preview
+@Composable
+private fun PreviewPromptCountLabel() {
+    MaterialTheme {
+        PromptCountLabel("Prompt", 40, 77)
     }
 }

@@ -39,6 +39,7 @@ class GenerationPreferences(private val context: Context) {
     private val SHARE_CLEAR_CLIPBOARD_KEY =
         booleanPreferencesKey("share_clear_clipboard_on_import")
     private val CUSTOM_SCENARIOS_KEY = stringSetPreferencesKey("custom_scenarios")
+    private val CUSTOM_PRESETS_KEY = stringSetPreferencesKey("custom_presets")
 
     fun observeShareUseBase64(): Flow<Boolean> = context.dataStore.data
         .catch { exception ->
@@ -50,7 +51,15 @@ class GenerationPreferences(private val context: Context) {
         .catch { exception ->
             if (exception is IOException) emit(emptyPreferences()) else throw exception
         }
-        .map { it[SHARE_CLEAR_CLIPBOARD_KEY] ?: true }
+        .map { it[SHARE_CLEAR_CLIPBOARD_KEY] ?: false }
+
+    suspend fun getCustomPresets(): Set<String> = context.dataStore.data.map {
+        it[CUSTOM_PRESETS_KEY] ?: emptySet()
+    }.first()
+
+    suspend fun saveCustomPresets(presets: Set<String>) {
+        context.dataStore.edit { it[CUSTOM_PRESETS_KEY] = presets }
+    }
 
     suspend fun setShareUseBase64(value: Boolean) {
         context.dataStore.edit { it[SHARE_USE_BASE64_KEY] = value }
