@@ -325,6 +325,10 @@
     <string name="template_category_realistic">Realistic</string>
     <string name="template_category_landscape">Landscape</string>
     <string name="template_category_portrait">Portrait</string>
+    <string name="template_category_nsfw">NSFW</string>
+    <string name="template_category_environment">Environment</string>
+    <string name="template_category_character">Character</string>
+    <string name="template_category_style">Style</string>
     <string name="template_category_custom">Custom</string>
     <string name="apply_template">Apply Template</string>
     <string name="prompt_variation">Prompt Variation</string>
@@ -340,4 +344,5 @@
     <string name="right_image">Right image</string>
     <string name="not_downloaded">not downloaded</string>
     <string name="select_upscaler">Select Upscaler</string>
+    <string name="variations">variations</string>
 </resources>

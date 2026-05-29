@@ -308,4 +308,5 @@
     <string name="history_view_filter">过滤</string>
     <string name="not_downloaded">not downloaded</string>
     <string name="select_upscaler">Select Upscaler</string>
+    <string name="variations">variations</string>
 </resources>

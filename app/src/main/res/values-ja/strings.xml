@@ -280,4 +280,5 @@
     <string name="history_view_filter">フィルター</string>
     <string name="not_downloaded">not downloaded</string>
     <string name="select_upscaler">Select Upscaler</string>
+    <string name="variations">variations</string>
 </resources>
