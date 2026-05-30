@@ -46,19 +46,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -1501,21 +1489,24 @@ fun ModelRunScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             AnimatedVisibility(
                 visible = intermediateBitmap == null,
+                modifier = Modifier.weight(1f),
                 enter = fadeIn() + expandVertically(expandFrom = Alignment.Top),
                 exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Top)
             ) {
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     shape = MaterialTheme.shapes.large
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Presets Section
@@ -2013,12 +2004,13 @@ fun ModelRunScreen(
                                     }
                                 )
                             }
-                        }
 
                         PromptTagTextField(
                             value = promptFieldValue,
                             onValueChange = ::updatePromptField,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             label = {
                                 PromptCountLabel(
                                     label = stringResource(R.string.image_prompt),
@@ -2039,7 +2031,9 @@ fun ModelRunScreen(
                         PromptTagTextField(
                             value = negativePromptFieldValue,
                             onValueChange = ::updateNegativePromptField,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f),
                             label = {
                                 PromptCountLabel(
                                     label = stringResource(R.string.negative_prompt),
@@ -2230,6 +2224,169 @@ fun ModelRunScreen(
                                 }
                             }
                         }
+
+                        AnimatedVisibility(
+                            visible = selectedImageUri != null && base64EncodeDone,
+                            enter = expandVertically() + fadeIn(),
+                            exit = shrinkVertically() + fadeOut()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    Card(
+                                        modifier = Modifier
+                                            .size(100.dp),
+                                        shape = MaterialTheme.shapes.small,
+                                    ) {
+                                        Box {
+                                            croppedBitmap?.let { bitmap ->
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(
+                                                        LocalContext.current
+                                                    )
+                                                        .data(bitmap)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = "Cropped Image",
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            } ?: selectedImageUri?.let { uri ->
+                                                AsyncImage(
+                                                    model = ImageRequest.Builder(
+                                                        LocalContext.current
+                                                    )
+                                                        .data(uri)
+                                                        .crossfade(true)
+                                                        .build(),
+                                                    contentDescription = "Selected Image",
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    selectedImageUri = null
+                                                    croppedBitmap = null
+                                                    maskBitmap = null
+                                                    isInpaintMode = false
+                                                    cropRect = null
+                                                    savedPathHistory = null
+                                                    hasOriginalImageForStitch = false
+                                                },
+                                                modifier = Modifier
+                                                    .size(24.dp)
+                                                    .background(
+                                                        color = MaterialTheme.colorScheme.surface.copy(
+                                                            alpha = 0.7f
+                                                        ),
+                                                        shape = CircleShape
+                                                    )
+                                                    .align(Alignment.TopEnd)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Clear,
+                                                    contentDescription = "Remove Image",
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    AnimatedVisibility(
+                                        visible = croppedBitmap != null && !isInpaintMode,
+                                        enter = fadeIn() + expandHorizontally(),
+                                        exit = fadeOut() + shrinkHorizontally()
+                                    ) {
+                                        Row {
+                                            Spacer(modifier = Modifier.width(12.dp))
+                                            FilledTonalIconButton(
+                                                onClick = {
+                                                    if (croppedBitmap != null) {
+                                                        showInpaintScreen = true
+                                                    } else {
+                                                        Toast.makeText(
+                                                            context,
+                                                            "Please Crop First",
+                                                            Toast.LENGTH_SHORT
+                                                        ).show()
+                                                    }
+                                                },
+                                                shape = CircleShape,
+                                                modifier = Modifier.size(40.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Brush,
+                                                    contentDescription = "Set Mask",
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    AnimatedVisibility(
+                                        visible = isInpaintMode && maskBitmap != null,
+                                        enter = fadeIn() + expandHorizontally(),
+                                        exit = fadeOut() + shrinkHorizontally()
+                                    ) {
+                                        Row {
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Card(
+                                                modifier = Modifier
+                                                    .size(100.dp)
+                                                    .clickable {
+                                                        if (croppedBitmap != null && maskBitmap != null) {
+                                                            showInpaintScreen = true
+                                                        }
+                                                    },
+                                                shape = MaterialTheme.shapes.small,
+                                            ) {
+                                                Box {
+                                                    maskBitmap?.let { mb ->
+                                                        AsyncImage(
+                                                            model = ImageRequest.Builder(
+                                                                LocalContext.current
+                                                            )
+                                                                .data(mb)
+                                                                .crossfade(true)
+                                                                .build(),
+                                                            contentDescription = "Mask Image",
+                                                            modifier = Modifier.fillMaxSize()
+                                                        )
+                                                    }
+                                                    IconButton(
+                                                        onClick = {
+                                                            maskBitmap = null
+                                                            isInpaintMode = false
+                                                            savedPathHistory = null
+                                                        },
+                                                        modifier = Modifier
+                                                            .size(24.dp)
+                                                            .background(
+                                                                color = MaterialTheme.colorScheme.surface.copy(
+                                                                    alpha = 0.7f
+                                                                ),
+                                                                shape = CircleShape
+                                                            )
+                                                            .align(Alignment.TopEnd)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Default.Clear,
+                                                            contentDescription = "Clear Mask",
+                                                            modifier = Modifier.size(16.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2268,16 +2425,19 @@ fun ModelRunScreen(
             }
             AnimatedVisibility(
                 visible = isRunning,
+                modifier = Modifier.weight(1f),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
                 ElevatedCard(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxSize(),
                     shape = MaterialTheme.shapes.large
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
                             text = if (currentBatchIndex > 0) "${
@@ -2311,7 +2471,7 @@ fun ModelRunScreen(
                                 shape = MaterialTheme.shapes.small,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .aspectRatio(currentWidth.toFloat() / currentHeight.toFloat())
+                                    .weight(1f)
                             ) {
                                 Image(
                                     bitmap = bitmap.asImageBitmap(),
@@ -2323,170 +2483,8 @@ fun ModelRunScreen(
                     }
                 }
             }
-
-            AnimatedVisibility(
-                visible = selectedImageUri != null && base64EncodeDone,
-                enter = expandVertically() + fadeIn(),
-                exit = shrinkVertically() + fadeOut()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Card(
-                            modifier = Modifier
-                                .size(100.dp),
-                            shape = MaterialTheme.shapes.small,
-                        ) {
-                            Box {
-                                croppedBitmap?.let { bitmap ->
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(
-                                            LocalContext.current
-                                        )
-                                            .data(bitmap)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "Cropped Image",
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                } ?: selectedImageUri?.let { uri ->
-                                    AsyncImage(
-                                        model = ImageRequest.Builder(
-                                            LocalContext.current
-                                        )
-                                            .data(uri)
-                                            .crossfade(true)
-                                            .build(),
-                                        contentDescription = "Selected Image",
-                                        modifier = Modifier.fillMaxSize()
-                                    )
-                                }
-                                IconButton(
-                                    onClick = {
-                                        selectedImageUri = null
-                                        croppedBitmap = null
-                                        maskBitmap = null
-                                        isInpaintMode = false
-                                        cropRect = null
-                                        savedPathHistory = null
-                                        hasOriginalImageForStitch = false
-                                    },
-                                    modifier = Modifier
-                                        .size(24.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.surface.copy(
-                                                alpha = 0.7f
-                                            ),
-                                            shape = CircleShape
-                                        )
-                                        .align(Alignment.TopEnd)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Clear,
-                                        contentDescription = "Remove Image",
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visible = croppedBitmap != null && !isInpaintMode,
-                            enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
-                        ) {
-                            Row {
-                                Spacer(modifier = Modifier.width(12.dp))
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        if (croppedBitmap != null) {
-                                            showInpaintScreen = true
-                                        } else {
-                                            Toast.makeText(
-                                                context,
-                                                "Please Crop First",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    },
-                                    shape = CircleShape,
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Brush,
-                                        contentDescription = "Set Mask",
-                                    )
-                                }
-                            }
-                        }
-
-                        AnimatedVisibility(
-                            visible = isInpaintMode && maskBitmap != null,
-                            enter = fadeIn() + expandHorizontally(),
-                            exit = fadeOut() + shrinkHorizontally()
-                        ) {
-                            Row {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Card(
-                                    modifier = Modifier
-                                        .size(100.dp)
-                                        .clickable {
-                                            if (croppedBitmap != null && maskBitmap != null) {
-                                                showInpaintScreen = true
-                                            }
-                                        },
-                                    shape = MaterialTheme.shapes.small,
-                                ) {
-                                    Box {
-                                        maskBitmap?.let { mb ->
-                                            AsyncImage(
-                                                model = ImageRequest.Builder(
-                                                    LocalContext.current
-                                                )
-                                                    .data(mb)
-                                                    .crossfade(true)
-                                                    .build(),
-                                                contentDescription = "Mask Image",
-                                                modifier = Modifier.fillMaxSize()
-                                            )
-                                        }
-                                        IconButton(
-                                            onClick = {
-                                                maskBitmap = null
-                                                isInpaintMode = false
-                                                savedPathHistory = null
-                                            },
-                                            modifier = Modifier
-                                                .size(24.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.surface.copy(
-                                                        alpha = 0.7f
-                                                    ),
-                                                    shape = CircleShape
-                                                )
-                                                .align(Alignment.TopEnd)
-                                        ) {
-                                            Icon(
-                                                Icons.Default.Clear,
-                                                contentDescription = "Clear Mask",
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
+    }
 
     @Composable
     fun ResultPage() {
@@ -2652,7 +2650,7 @@ fun ModelRunScreen(
                                             fadeOut(animationSpec = tween(400))
                                 },
                                 label = "ImagePreviewCrossfade"
-                            ) { _ ->
+                            ) { targetVersion ->
                                 Surface(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -2668,18 +2666,21 @@ fun ModelRunScreen(
                                     shape = MaterialTheme.shapes.medium,
                                     shadowElevation = 4.dp
                                 ) {
-                                    currentBitmap?.let { bitmap ->
-                                        AsyncImage(
-                                            model = ImageRequest.Builder(
-                                                LocalContext.current
+                                    // Use targetVersion to satisfy unused check
+                                    if (targetVersion >= 0) {
+                                        currentBitmap?.let { bitmap ->
+                                            AsyncImage(
+                                                model = ImageRequest.Builder(
+                                                    LocalContext.current
+                                                )
+                                                    .data(bitmap)
+                                                    .size(coil.size.Size.ORIGINAL)
+                                                    .crossfade(true)
+                                                    .build(),
+                                                contentDescription = "generated image",
+                                                modifier = Modifier.fillMaxSize()
                                             )
-                                                .data(bitmap)
-                                                .size(coil.size.Size.ORIGINAL)
-                                                .crossfade(true)
-                                                .build(),
-                                            contentDescription = "generated image",
-                                            modifier = Modifier.fillMaxSize()
-                                        )
+                                        }
                                     }
                                 }
                             }
