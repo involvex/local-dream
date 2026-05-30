@@ -20,3 +20,4 @@ app/src/main/cpp/QNN_SDK.zip
 app/src/main/cpp/qairt
 
 .fresh
+/app/src/main/cpp/3rdparty/MNN/apps/Android/MnnLlmChat/app/.cxx/

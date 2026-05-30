@@ -1,8 +1,6 @@
 package io.github.xororz.localdream.ui.screens
 
 import android.Manifest
-import io.github.xororz.localdream.data.ModelPreset
-import io.github.xororz.localdream.data.defaultPresets
 import android.annotation.SuppressLint
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -177,6 +175,7 @@ import io.github.xororz.localdream.data.TagMatchType
 import io.github.xororz.localdream.data.TagSuggestion
 import io.github.xororz.localdream.data.UpscalerModel
 import io.github.xororz.localdream.data.UpscalerRepository
+import io.github.xororz.localdream.data.defaultPresets
 import io.github.xororz.localdream.service.BackendService
 import io.github.xororz.localdream.service.BackgroundGenerationService
 import io.github.xororz.localdream.service.BackgroundGenerationService.GenerationState
@@ -1542,98 +1541,86 @@ fun ModelRunScreen(
                             }
                         }
 
+                        // Compact toolbar with better spacing
+                        // Compact toolbar with better spacing
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                stringResource(R.string.prompt_settings),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            FilledTonalButton(
+                                onClick = { showTemplateDialog = true },
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                             ) {
-                                FilledTonalButton(
-                                    onClick = { showTemplateDialog = true },
-                                    modifier = Modifier.height(36.dp)
-                                ) {
-                                    Text(
-                                        selectedTemplateId?.let { id ->
-                                            PromptTemplates.getTemplateById(id)?.name ?: stringResource(R.string.templates)
-                                        } ?: stringResource(R.string.templates),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                FilledTonalButton(
-                                    onClick = {
-                                        promptVariations = PromptVariationGenerator.generateVariations(prompt, 5)
-                                        showVariationDialog = true
-                                    },
-                                    enabled = prompt.isNotBlank(),
-                                    modifier = Modifier.height(36.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.AutoFixHigh,
-                                        contentDescription = stringResource(R.string.prompt_variation),
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.TagBrowser.route) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Tag,
-                                        contentDescription = "browse tags",
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                IconButton(
-                                    onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.ScenarioManagement.route) },
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Bookmarks,
-                                        contentDescription = "manage scenarios",
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                }
-                                if (useImg2img) {
-                                    TextButton(
-                                        onClick = {
-                                            onSelectImageClick()
-                                        }
-                                    ) {
-                                        Text(
-                                            "img2img",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            modifier = Modifier.padding(end = 4.dp)
-                                        )
-                                        Icon(
-                                            Icons.Default.Image,
-                                            contentDescription = "select image",
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
+                                Text(
+                                    selectedTemplateId?.let { id ->
+                                        PromptTemplates.getTemplateById(id)?.name ?: stringResource(R.string.templates)
+                                    } ?: stringResource(R.string.templates),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+                            FilledTonalButton(
+                                onClick = {
+                                    promptVariations = PromptVariationGenerator.generateVariations(prompt, 5)
+                                    showVariationDialog = true
+                                },
+                                enabled = prompt.isNotBlank(),
+                                modifier = Modifier.height(36.dp),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoFixHigh,
+                                    contentDescription = stringResource(R.string.prompt_variation),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.TagBrowser.route) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Tag,
+                                    contentDescription = "browse tags",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            IconButton(
+                                onClick = { navController.navigate(io.github.xororz.localdream.navigation.Screen.ScenarioManagement.route) },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Bookmarks,
+                                    contentDescription = "manage scenarios",
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            if (useImg2img) {
                                 TextButton(
-                                    onClick = { showAdvancedSettings = true }
+                                    onClick = { onSelectImageClick() },
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
                                 ) {
-                                    Text(
-                                        stringResource(R.string.advanced_settings),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        modifier = Modifier.padding(end = 4.dp)
-                                    )
                                     Icon(
-                                        Icons.Default.Settings,
-                                        contentDescription = stringResource(R.string.settings),
+                                        Icons.Default.Image,
+                                        contentDescription = "select image",
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
                             }
+                            TextButton(
+                                onClick = { showAdvancedSettings = true },
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Settings,
+                                    contentDescription = stringResource(R.string.settings),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
                             if (showAdvancedSettings) {
                                 AlertDialog(
                                     onDismissRequest = {
@@ -2500,7 +2487,6 @@ fun ModelRunScreen(
                 }
             }
         }
-    }
 
     @Composable
     fun ResultPage() {
@@ -3176,6 +3162,7 @@ fun ModelRunScreen(
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
                                             .data(item.imageFile)
+                                            .size(512) // Thumbnails are smaller, but grid uses 2 columns
                                             .crossfade(true)
                                             .build(),
                                         contentDescription = "Generated image",
@@ -3574,10 +3561,8 @@ fun ModelRunScreen(
                 }
         ) {
             AsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
+                model = ImageRequest.Builder(context)
                     .data(currentBitmap!!)
-                    .size(coil.size.Size.ORIGINAL)
-                    .crossfade(true)
                     .build(),
                 contentDescription = "preview image",
                 modifier = Modifier
@@ -3955,8 +3940,6 @@ fun ModelRunScreen(
                 AsyncImage(
                     model = ImageRequest.Builder(context)
                         .data(historyBitmap)
-                        .size(coil.size.Size.ORIGINAL)
-                        .crossfade(true)
                         .build(),
                     contentDescription = "history image",
                     modifier = Modifier
@@ -4179,7 +4162,6 @@ fun ModelRunScreen(
                                 style = MaterialTheme.typography.bodyMedium
                             )
                         }
-
                         Column {
                             Text(
                                 stringResource(R.string.image_prompt),
