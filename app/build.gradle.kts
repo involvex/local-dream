@@ -26,11 +26,11 @@ detekt {
 }
 
 android {
-    namespace = "io.github.xororz.localdream"
+    namespace = "com.involvex.localdreamchat"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.xororz.localdream"
+        applicationId = "com.involvex.localdreamchat"
         minSdk = 28
 //        minSdk = 31
         targetSdk = 36
