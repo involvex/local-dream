@@ -2,9 +2,6 @@ package com.involvex.localdreamchat.ui.screens
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +23,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -65,8 +66,8 @@ import com.involvex.localdreamchat.data.db.AppDatabase
 import com.involvex.localdreamchat.data.model.ChatMessage
 import com.involvex.localdreamchat.data.repository.ChatRepository
 import com.involvex.localdreamchat.navigation.popBackStackIfResumed
-import com.involvex.localdreamchat.service.ModelDownloadService
 import com.involvex.localdreamchat.service.LlmState
+import com.involvex.localdreamchat.service.ModelDownloadService
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -85,6 +86,8 @@ fun ChatScreen(
     val messages by viewModel.messages.collectAsState()
     val isGenerating by viewModel.isGenerating.collectAsState()
     val llmState by viewModel.llmState.collectAsState()
+    val isGeneratingImage by viewModel.isGeneratingImage.collectAsState()
+    val imageGenerationError by viewModel.imageGenerationError.collectAsState()
     val downloadState by ModelDownloadService.downloadState.collectAsState()
 
     val modelInstalled = viewModel.isModelDownloaded()
@@ -127,11 +130,17 @@ fun ChatScreen(
                             // Show LLM status
                             val statusText = when (llmState) {
                                 is LlmState.Unloaded -> {
-                                    if (viewModel.isModelDownloaded()) "Tap ⚡ to load AI"
-                                    else "LLM model not installed"
+                                    if (viewModel.isModelDownloaded()) {
+                                        "Tap ⚡ to load AI"
+                                    } else {
+                                        "LLM model not installed"
+                                    }
                                 }
+
                                 is LlmState.Loading -> "Loading AI model..."
+
                                 is LlmState.Ready -> "AI ready"
+
                                 is LlmState.Error -> "AI: ${(llmState as LlmState.Error).message.take(30)}"
                             }
                             Text(
@@ -201,7 +210,9 @@ fun ChatScreen(
                 val isExtracting = downloadState is ModelDownloadService.DownloadState.Extracting
                 val progress = if (downloadState is ModelDownloadService.DownloadState.Downloading) {
                     (downloadState as ModelDownloadService.DownloadState.Downloading).progress
-                } else 0f
+                } else {
+                    0f
+                }
 
                 Surface(
                     color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -246,6 +257,7 @@ fun ChatScreen(
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
                                 )
                             }
+
                             isExtracting -> {
                                 LinearProgressIndicator(
                                     progress = { 0.9f },
@@ -261,6 +273,7 @@ fun ChatScreen(
                                     color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
                                 )
                             }
+
                             else -> {
                                 TextButton(
                                     onClick = {
@@ -327,6 +340,26 @@ fun ChatScreen(
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
+
+                    // Image generation button
+                    IconButton(
+                        onClick = {
+                            character?.let { char ->
+                                viewModel.generateCharacterImage()
+                            }
+                        },
+                        enabled = !isGenerating && !isGeneratingImage && llmState is LlmState.Ready,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Image,
+                            contentDescription = "Generate image",
+                            tint = if (!isGenerating && !isGeneratingImage && llmState is LlmState.Ready) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
 
                     IconButton(
                         onClick = {

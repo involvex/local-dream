@@ -10,9 +10,9 @@ import com.involvex.localdreamchat.data.model.ChatMessage
 import com.involvex.localdreamchat.data.model.Conversation
 import com.involvex.localdreamchat.data.repository.ChatRepository
 import com.involvex.localdreamchat.service.ImageGenerationBridge
+import com.involvex.localdreamchat.service.LlmChatMessage
 import com.involvex.localdreamchat.service.LlmService
 import com.involvex.localdreamchat.service.LlmState
-import com.involvex.localdreamchat.service.LlmChatMessage
 import com.involvex.localdreamchat.service.TokenCallback
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -43,6 +43,12 @@ class ChatViewModel(
 
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
+
+    private val _isGeneratingImage = MutableStateFlow(false)
+    val isGeneratingImage: StateFlow<Boolean> = _isGeneratingImage.asStateFlow()
+
+    private val _imageGenerationError = MutableStateFlow<String?>(null)
+    val imageGenerationError: StateFlow<String?> = _imageGenerationError.asStateFlow()
 
     private val _llmState = MutableStateFlow<LlmState>(LlmState.Unloaded)
     val llmState: StateFlow<LlmState> = _llmState.asStateFlow()
@@ -164,6 +170,41 @@ class ChatViewModel(
     fun unloadModel() {
         viewModelScope.launch {
             llmService.unload()
+        }
+    }
+
+    fun generateCharacterImage(explicitPrompt: String? = null) {
+        if (_isGeneratingImage.value) return
+        val conv = _conversation.value ?: return
+        val char = _character.value ?: return
+
+        viewModelScope.launch {
+            _isGeneratingImage.value = true
+            _imageGenerationError.value = null
+
+            try {
+                val path = imageBridge.generateCharacterImage(
+                    conversationId = conv.id,
+                    characterName = char.name,
+                    characterDescription = char.description,
+                    explicitPrompt = explicitPrompt,
+                )
+
+                if (path != null) {
+                    val imageMsg = repository.addAssistantMessage(
+                        conversationId = conv.id,
+                        content = "Here's an image of me:",
+                    )
+                    repository.updateMessageImage(imageMsg.id, path)
+                } else {
+                    _imageGenerationError.value = "Image generation returned no result"
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Character image generation failed", e)
+                _imageGenerationError.value = e.message
+            } finally {
+                _isGeneratingImage.value = false
+            }
         }
     }
 

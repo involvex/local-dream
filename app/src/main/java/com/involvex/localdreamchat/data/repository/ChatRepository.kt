@@ -1,15 +1,15 @@
 package com.involvex.localdreamchat.data.repository
 
 import com.involvex.localdreamchat.data.db.AppDatabase
-import com.involvex.localdreamchat.data.db.ChatMessageEntity
 import com.involvex.localdreamchat.data.db.CharacterEntity
+import com.involvex.localdreamchat.data.db.ChatMessageEntity
 import com.involvex.localdreamchat.data.db.ConversationEntity
 import com.involvex.localdreamchat.data.model.ChatCharacter
 import com.involvex.localdreamchat.data.model.ChatMessage
 import com.involvex.localdreamchat.data.model.Conversation
+import java.util.UUID
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import java.util.UUID
 
 class ChatRepository private constructor(
     private val db: AppDatabase,
@@ -21,25 +21,19 @@ class ChatRepository private constructor(
 
     // ── Characters ───────────────────────────────────────────────
 
-    fun observeCharacters(): Flow<List<ChatCharacter>> =
-        characterDao.observeAll().map { list -> list.map { it.toDomain() } }
+    fun observeCharacters(): Flow<List<ChatCharacter>> = characterDao.observeAll().map { list -> list.map { it.toDomain() } }
 
-    suspend fun getCharacters(): List<ChatCharacter> =
-        characterDao.getAll().map { it.toDomain() }
+    suspend fun getCharacters(): List<ChatCharacter> = characterDao.getAll().map { it.toDomain() }
 
-    suspend fun getCharacter(id: String): ChatCharacter? =
-        characterDao.getById(id)?.toDomain()
+    suspend fun getCharacter(id: String): ChatCharacter? = characterDao.getById(id)?.toDomain()
 
-    fun observeCharacter(id: String): Flow<ChatCharacter?> =
-        characterDao.observeById(id).map { it?.toDomain() }
+    fun observeCharacter(id: String): Flow<ChatCharacter?> = characterDao.observeById(id).map { it?.toDomain() }
 
-    suspend fun setCharacterFavorite(id: String, favorite: Boolean) =
-        characterDao.setFavorite(id, favorite)
+    suspend fun setCharacterFavorite(id: String, favorite: Boolean) = characterDao.setFavorite(id, favorite)
 
     // ── Conversations ───────────────────────────────────────────
 
-    fun observeConversations(): Flow<List<Conversation>> =
-        conversationDao.observeAll().map { list -> list.map { it.toDomain() } }
+    fun observeConversations(): Flow<List<Conversation>> = conversationDao.observeAll().map { list -> list.map { it.toDomain() } }
 
     suspend fun getOrCreateConversation(characterId: String): Conversation {
         val existing = conversationDao.getByCharacterId(characterId)
@@ -58,8 +52,7 @@ class ChatRepository private constructor(
         return conversation.toDomain()
     }
 
-    fun observeConversation(id: String): Flow<Conversation?> =
-        conversationDao.observeById(id).map { it?.toDomain() }
+    fun observeConversation(id: String): Flow<Conversation?> = conversationDao.observeById(id).map { it?.toDomain() }
 
     suspend fun deleteConversation(id: String) {
         chatMessageDao.deleteByConversation(id)
@@ -68,11 +61,9 @@ class ChatRepository private constructor(
 
     // ── Messages ────────────────────────────────────────────────
 
-    fun observeMessages(conversationId: String): Flow<List<ChatMessage>> =
-        chatMessageDao.observeByConversation(conversationId).map { list -> list.map { it.toDomain() } }
+    fun observeMessages(conversationId: String): Flow<List<ChatMessage>> = chatMessageDao.observeByConversation(conversationId).map { list -> list.map { it.toDomain() } }
 
-    suspend fun getMessages(conversationId: String): List<ChatMessage> =
-        chatMessageDao.getByConversation(conversationId).map { it.toDomain() }
+    suspend fun getMessages(conversationId: String): List<ChatMessage> = chatMessageDao.getByConversation(conversationId).map { it.toDomain() }
 
     suspend fun addUserMessage(conversationId: String, content: String): ChatMessage {
         val message = ChatMessageEntity(
@@ -113,11 +104,9 @@ class ChatRepository private constructor(
         return message.toDomain()
     }
 
-    suspend fun updateMessageImage(messageId: String, imagePath: String) =
-        chatMessageDao.updateImagePath(messageId, imagePath)
+    suspend fun updateMessageImage(messageId: String, imagePath: String) = chatMessageDao.updateImagePath(messageId, imagePath)
 
-    suspend fun markGenerationComplete(messageId: String) =
-        chatMessageDao.markGenerationComplete(messageId)
+    suspend fun markGenerationComplete(messageId: String) = chatMessageDao.markGenerationComplete(messageId)
 
     // ── Seeding ─────────────────────────────────────────────────
 
@@ -173,10 +162,9 @@ class ChatRepository private constructor(
         @Volatile
         private var INSTANCE: ChatRepository? = null
 
-        fun get(db: AppDatabase): ChatRepository =
-            INSTANCE ?: synchronized(this) {
-                INSTANCE ?: ChatRepository(db).also { INSTANCE = it }
-            }
+        fun get(db: AppDatabase): ChatRepository = INSTANCE ?: synchronized(this) {
+            INSTANCE ?: ChatRepository(db).also { INSTANCE = it }
+        }
 
         private val DEFAULT_CHARACTERS = listOf(
             ChatCharacter(

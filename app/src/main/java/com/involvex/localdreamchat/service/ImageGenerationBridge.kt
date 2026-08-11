@@ -1,19 +1,20 @@
 package com.involvex.localdreamchat.service
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import android.util.Log
+import com.involvex.localdreamchat.data.Model
 import com.involvex.localdreamchat.data.repository.ChatRepository
 import com.involvex.localdreamchat.utils.Http
-import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -31,6 +32,7 @@ class ImageGenerationBridge(
         private const val DEFAULT_HEIGHT = 512
         private const val DEFAULT_STEPS = 20
         private const val DEFAULT_CFG = 7.0f
+        private const val BACKEND_START_TIMEOUT_MS = 120_000L
     }
 
     private val client by lazy {
@@ -55,13 +57,6 @@ class ImageGenerationBridge(
             userMessage.contains(keyword, ignoreCase = true)
         } ?: return@withContext null
 
-        // Check if backend is running before attempting generation
-        val backendRunning = BackendService.backendState.value is BackendService.BackendState.Running
-        if (!backendRunning) {
-            Log.w(TAG, "Image generation triggered but backend is not running, skipping")
-            return@withContext null
-        }
-
         Log.i(TAG, "Triggered by keyword: '$matchedKeyword' in message: '${userMessage.take(50)}'")
 
         val prompt = extractPrompt(userMessage, matchedKeyword)
@@ -71,6 +66,12 @@ class ImageGenerationBridge(
         }
 
         try {
+            val started = ensureBackendRunning()
+            if (!started) {
+                Log.w(TAG, "Backend could not be started for image generation")
+                return@withContext null
+            }
+
             val bitmap = generateImage(prompt)
             val path = saveImage(conversationId, bitmap)
             Log.i(TAG, "Image generated and saved: $path")
@@ -82,20 +83,117 @@ class ImageGenerationBridge(
     }
 
     /**
+     * Explicit image generation request (e.g. from a button tap).
+     * Uses the character description as prompt if no explicit prompt is given.
+     */
+    suspend fun generateCharacterImage(
+        conversationId: String,
+        characterName: String,
+        characterDescription: String,
+        explicitPrompt: String? = null,
+    ): String? = withContext(Dispatchers.IO) {
+        val prompt = explicitPrompt
+            ?: "portrait of $characterName, $characterDescription, masterpiece, best quality, ultra-detailed, 8k"
+                .trim()
+
+        Log.i(TAG, "Character image request: $prompt")
+
+        try {
+            val started = ensureBackendRunning()
+            if (!started) {
+                Log.w(TAG, "Backend could not be started for character image")
+                return@withContext null
+            }
+
+            val bitmap = generateImage(prompt)
+            val path = saveImage(conversationId, bitmap)
+            Log.i(TAG, "Character image generated and saved: $path")
+            path
+        } catch (e: Exception) {
+            Log.e(TAG, "Character image generation failed: ${e.message}", e)
+            null
+        }
+    }
+
+    /**
+     * Finds a suitable downloaded model and starts the backend if needed.
+     * Returns true when the backend is Running.
+     */
+    private suspend fun ensureBackendRunning(): Boolean {
+        val state = BackendService.backendState.value
+        if (state is BackendService.BackendState.Running) {
+            return true
+        }
+
+        val modelConfig = findDownloadedImageModel() ?: run {
+            Log.e(TAG, "No downloaded image model found")
+            return false
+        }
+
+        Log.i(TAG, "Starting backend for model: ${modelConfig.modelId} (${modelConfig.backendType})")
+        startBackendForModel(modelConfig)
+
+        return withContext(Dispatchers.IO) {
+            withTimeout(BACKEND_START_TIMEOUT_MS) {
+                BackendService.backendState.first { it is BackendService.BackendState.Running }
+            }
+        }.let { true }
+    }
+
+    private fun startBackendForModel(config: BackendModelConfig) {
+        val intent = Intent(context, BackendService::class.java).apply {
+            putExtra("modelId", config.modelId)
+            putExtra("backendType", config.backendType)
+            putExtra("width", DEFAULT_WIDTH)
+            putExtra("height", DEFAULT_HEIGHT)
+        }
+        context.startForegroundService(intent)
+    }
+
+    private data class BackendModelConfig(
+        val modelId: String,
+        val backendType: String,
+    )
+
+    private fun findDownloadedImageModel(): BackendModelConfig? {
+        val modelsDir = Model.getModelsDir(context)
+        val preferredCpuIds = listOf("absoluterealitycpu", "chilloutmixcpu")
+        val preferredNpuIds = listOf("absolutereality", "chilloutmix", "qteamix", "anythingv5", "cuteyukimix")
+
+        for (id in preferredCpuIds) {
+            val dir = File(modelsDir, id)
+            if (dir.exists() && dir.isDirectory && dir.listFiles()?.isNotEmpty() == true) {
+                return BackendModelConfig(modelId = id, backendType = "sd15cpu")
+            }
+        }
+
+        for (id in preferredNpuIds) {
+            val dir = File(modelsDir, id)
+            if (dir.exists() && dir.isDirectory && dir.listFiles()?.isNotEmpty() == true) {
+                return BackendModelConfig(modelId = id, backendType = "sd15npu")
+            }
+        }
+
+        val anyDir = modelsDir.listFiles()?.firstOrNull { dir ->
+            dir.isDirectory && dir.listFiles()?.isNotEmpty() == true
+        }
+        return anyDir?.let { dir ->
+            BackendModelConfig(modelId = dir.name, backendType = "sd15cpu")
+        }
+    }
+
+    /**
      * Extracts the image generation prompt from the user message.
      * Strips the trigger keyword and cleans up the remaining text.
      */
     private fun extractPrompt(message: String, keyword: String): String {
-        // Remove the trigger keyword and clean up
         var prompt = message.replaceFirst(keyword, "", ignoreCase = true).trim()
 
-        // Remove common filler phrases
         val fillers = listOf("of a", "of an", "of the", "a picture of", "an image of", "an illustration of")
         for (filler in fillers) {
             prompt = prompt.replaceFirst(filler, "", ignoreCase = true).trim()
         }
 
-        // If prompt is too short, use the full message as prompt
         if (prompt.length < 3) {
             prompt = message
         }
@@ -105,6 +203,7 @@ class ImageGenerationBridge(
 
     /**
      * Makes the HTTP request to the backend /generate endpoint.
+     * Parses the SSE stream (data: <json>) and returns the final image.
      */
     private fun generateImage(prompt: String): Bitmap {
         val jsonObject = JSONObject().apply {
@@ -130,49 +229,69 @@ class ImageGenerationBridge(
 
         val body = response.body ?: throw IOException("Empty response body")
 
-        // Read streaming response — the final chunk contains the complete image
+        var base64Data: String? = null
         val reader = body.byteStream().bufferedReader()
-        var lastImageData: String? = null
 
         reader.useLines { lines ->
             for (line in lines) {
                 if (line.isBlank()) continue
+
+                val data = parseSseLine(line) ?: continue
+                if (data == "[DONE]") break
+
                 try {
-                    val json = JSONObject(line)
-                    if (json.has("image")) {
-                        lastImageData = json.getString("image")
-                    }
-                    if (json.optBoolean("done", false)) {
-                        break
+                    val json = JSONObject(data)
+                    when (json.optString("type")) {
+                        "progress" -> {
+                            val step = json.optInt("step")
+                            val total = json.optInt("total_steps")
+                            Log.d(TAG, "Generation progress: $step/$total")
+                        }
+
+                        "complete" -> {
+                            base64Data = json.optString("image")
+                            val format = json.optString("format", "raw")
+                            if (base64Data.isNullOrEmpty()) {
+                                throw IOException("no image data in complete message")
+                            }
+                            break
+                        }
                     }
                 } catch (_: Exception) {
-                    // Not JSON, skip
+                    Log.w(TAG, "Failed to parse SSE data: $data")
                 }
             }
         }
 
-        val base64Data = lastImageData ?: throw IOException("No image data received")
-
-        // Decode base64 to bitmap
         val decodedBytes = Base64.decode(base64Data, Base64.DEFAULT)
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.size)
             ?: throw IOException("Failed to decode image bitmap")
+    }
+
+    private fun parseSseLine(line: String): String? {
+        var trimmed = line.trim()
+        if (trimmed.isEmpty()) return null
+
+        if (trimmed.startsWith("data: ")) {
+            trimmed = trimmed.substring(6).trim()
+        }
+
+        return trimmed.takeIf { it.isNotEmpty() }
     }
 
     /**
      * Saves the generated bitmap to internal storage.
      * Returns the absolute file path.
      */
-    private suspend fun saveImage(conversationId: String, bitmap: Bitmap): String =
-        withContext(Dispatchers.IO) {
-            val imagesDir = File(context.filesDir, "chat_images").apply { mkdirs() }
-            val fileName = "${conversationId}_${UUID.randomUUID()}.jpg"
-            val file = File(imagesDir, fileName)
+    private suspend fun saveImage(conversationId: String, bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val imagesDir = File(context.filesDir, "chat_images").apply { mkdirs() }
+        val fileName = "${conversationId}_${UUID.randomUUID()}.jpg"
+        val file = File(imagesDir, fileName)
 
-            file.outputStream().use { out ->
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
-            }
-
-            file.absolutePath
+        file.outputStream().use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 95, out)
         }
+
+        file.absolutePath
+    }
 }

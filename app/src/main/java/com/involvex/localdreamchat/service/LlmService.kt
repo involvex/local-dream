@@ -30,10 +30,8 @@ class LlmService(private val context: Context) {
         @Volatile
         private var instance: LlmService? = null
 
-        fun get(context: Context): LlmService {
-            return instance ?: synchronized(this) {
-                instance ?: LlmService(context.applicationContext).also { instance = it }
-            }
+        fun get(context: Context): LlmService = instance ?: synchronized(this) {
+            instance ?: LlmService(context.applicationContext).also { instance = it }
         }
 
         @Deprecated("Use get(context) instead", ReplaceWith("get(context)"))
@@ -88,7 +86,9 @@ class LlmService(private val context: Context) {
                 Log.e(TAG, "Failed to load LLM model", e)
                 _state.value = LlmState.Error("Failed to load model: ${e.message}")
                 if (nativePtr != 0L) {
-                    try { LlmNative.nativeDestroy(nativePtr) } catch (_: Exception) {}
+                    try {
+                        LlmNative.nativeDestroy(nativePtr)
+                    } catch (_: Exception) {}
                     nativePtr = 0
                 }
             }
