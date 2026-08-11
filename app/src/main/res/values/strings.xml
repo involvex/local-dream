@@ -485,4 +485,11 @@
     <string name="ultrafix_import_output">Output size: %1$d×%2$d</string>
     <string name="ultrafix_import_scale">Scale: %1$d%%</string>
     <string name="ultrafix_longpress_hint">Tip: long-press the upscale or UltraFix button to import a local image.</string>
+
+    <!-- AI Chat -->
+    <string name="ai_chat">AI Chat</string>
+    <string name="ai_chat_hint">Chat with AI characters powered by on-device LLM</string>
+    <string name="download_llm_model">Download LLM Model</string>
+    <string name="llm_model_not_installed">LLM model not installed</string>
+    <string name="llm_model_download_hint">The language model is needed for AI chat. Tap to download.</string>
 </resources>

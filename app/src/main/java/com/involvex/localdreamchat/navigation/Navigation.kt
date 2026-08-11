@@ -23,4 +23,10 @@ sealed class Screen(val route: String) {
     object History : Screen("history")
 
     object RemoteLink : Screen("remote_link")
+
+    object CharacterList : Screen("character_list")
+
+    object Chat : Screen("chat/{characterId}") {
+        fun createRoute(characterId: String) = "chat/$characterId"
+    }
 }

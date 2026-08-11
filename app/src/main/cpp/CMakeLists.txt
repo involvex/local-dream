@@ -107,12 +107,15 @@ set(MNN_BUILD_FOR_ANDROID_COMMAND ON CACHE BOOL "" FORCE)
 set(MNN_USE_LOGCAT OFF CACHE BOOL "" FORCE)
 set(MNN_OPENCL ON CACHE BOOL "" FORCE)
 set(MNN_SUPPORT_TRANSFORMER_FUSE ON CACHE BOOL "" FORCE)
+set(MNN_BUILD_LLM ON CACHE BOOL "" FORCE)
+set(LLM_USE_MINJA ON CACHE BOOL "" FORCE)
 add_subdirectory(3rdparty/MNN)
 
 set(XTENSOR_USE_XSIMD ON)
 
 set(PACKAGE_INCLUDES
     ${MNN_ROOT_DIR}/include
+    ${MNN_ROOT_DIR}/transformers/llm/engine/include
     ${QNN_SDK_ROOT}/include/QNN
     ${CMAKE_CURRENT_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -158,6 +161,7 @@ set(SRC_DIR_WRAPPER_UTILS ${SRC_DIR}/WrapperUtils)
 # collect source files
 file(GLOB SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/llm_jni.cpp"
     # "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
     "${SRC_DIR}/QnnSampleApp.cpp"
     "${SRC_DIR_LOG}/*.cpp"
@@ -174,8 +178,8 @@ else()
     add_definitions(-DQNN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
 endif()
 
-# executable
-add_executable(${PROJECT_NAME} ${SOURCES})
+# shared library (JNI)
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 if(NOT QNN_DEBUG_ENABLE)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-s")
 endif()
@@ -183,7 +187,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PACKAGE_INCLUDES})
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${OUTPUT_SUFFIX}"
+    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/obj/local/${OUTPUT_SUFFIX}"
 )
 
 target_compile_definitions(${PROJECT_NAME}

@@ -22,6 +22,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.Request
@@ -45,7 +46,7 @@ class ModelDownloadService : Service() {
         private const val NOTIFICATION_ID = 2001
 
         private val _downloadState = MutableStateFlow<DownloadState>(DownloadState.Idle)
-        val downloadState: StateFlow<DownloadState> = _downloadState
+        val downloadState: StateFlow<DownloadState> = _downloadState.asStateFlow()
 
         const val ACTION_START_DOWNLOAD = "action_start_download"
         const val ACTION_CANCEL_DOWNLOAD = "action_cancel_download"
@@ -53,9 +54,10 @@ class ModelDownloadService : Service() {
         const val EXTRA_MODEL_ID = "model_id"
         const val EXTRA_MODEL_NAME = "model_name"
         const val EXTRA_FILE_URL = "file_url"
+        const val EXTRA_FILE_URLS = "file_urls"
         const val EXTRA_IS_ZIP = "is_zip"
         const val EXTRA_IS_NPU = "is_npu"
-        const val EXTRA_MODEL_TYPE = "model_type" // "sd" or "upscaler"
+        const val EXTRA_MODEL_TYPE = "model_type" // "sd", "upscaler", or "llm"
     }
 
     sealed class DownloadState {
@@ -82,13 +84,20 @@ class ModelDownloadService : Service() {
             ACTION_START_DOWNLOAD -> {
                 val modelId = intent.getStringExtra(EXTRA_MODEL_ID) ?: return START_NOT_STICKY
                 val modelName = intent.getStringExtra(EXTRA_MODEL_NAME) ?: modelId
-                val fileUrl = intent.getStringExtra(EXTRA_FILE_URL) ?: return START_NOT_STICKY
                 val isZip = intent.getBooleanExtra(EXTRA_IS_ZIP, false)
                 val isNpu = intent.getBooleanExtra(EXTRA_IS_NPU, false)
                 val modelType = intent.getStringExtra(EXTRA_MODEL_TYPE) ?: "sd"
 
+                val fileUrls = intent.getStringArrayListExtra(EXTRA_FILE_URLS)
+                    ?: listOfNotNull(intent.getStringExtra(EXTRA_FILE_URL))
+
+                if (fileUrls.isEmpty()) {
+                    Log.e(TAG, "No file URLs provided for download")
+                    return START_NOT_STICKY
+                }
+
                 startForeground(NOTIFICATION_ID, createNotification(modelName, 0f))
-                startDownload(modelId, modelName, fileUrl, isZip, isNpu, modelType)
+                startDownload(modelId, modelName, fileUrls, isZip, isNpu, modelType)
             }
 
             ACTION_CANCEL_DOWNLOAD -> {
@@ -101,7 +110,7 @@ class ModelDownloadService : Service() {
     private fun startDownload(
         modelId: String,
         modelName: String,
-        fileUrl: String,
+        fileUrls: List<String>,
         isZip: Boolean,
         isNpu: Boolean,
         modelType: String,
@@ -120,12 +129,11 @@ class ModelDownloadService : Service() {
                 }
                 tempDir.mkdirs()
 
-                tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
-
-                downloadFile(fileUrl, tempFile, modelId, modelName)
-
                 when (modelType) {
                     "sd" -> {
+                        tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
+                        downloadFile(fileUrls.first(), tempFile, modelId, modelName)
+
                         if (isZip) {
                             val modelDir = File(getModelsDir(), modelId)
 
@@ -155,6 +163,9 @@ class ModelDownloadService : Service() {
                     }
 
                     "upscaler" -> {
+                        tempFile = File(tempDir, "${modelId}_${System.currentTimeMillis()}.tmp")
+                        downloadFile(fileUrls.first(), tempFile, modelId, modelName)
+
                         val upscalerDir = File(getModelsDir(), modelId).apply {
                             if (!exists()) mkdirs()
                         }
@@ -164,15 +175,59 @@ class ModelDownloadService : Service() {
                             targetFile.delete()
                         }
 
-                        // Don't report success on a failed move: it would leave
-                        // an empty model dir that the UI/loader can't use.
                         if (!tempFile.renameTo(targetFile)) {
                             tempFile.copyTo(targetFile, overwrite = true)
                         }
                     }
+
+                    "llm" -> {
+                        val llmDir = File(filesDir, "llm_model").apply {
+                            if (exists()) deleteRecursively()
+                            mkdirs()
+                        }
+
+                        val totalBytes = fileUrls.sumOf { url ->
+                            val request = Request.Builder().url(url).build()
+                            client.newCall(request).execute().use { response ->
+                                response.body?.contentLength() ?: -1L
+                            }
+                        }
+
+                        var downloadedBytes = 0L
+
+                        fileUrls.forEach { url ->
+                            val fileName = url.substringAfterLast('/')
+                            if (fileName.isEmpty()) return@forEach
+
+                            tempFile = File(tempDir, modelId + "_" + fileName)
+                            val targetFile = File(llmDir, fileName)
+
+                            downloadFileWithProgress(url, tempFile!!, modelName) { bytes ->
+                                downloadedBytes += bytes
+                                val progress = if (totalBytes > 0) {
+                                    downloadedBytes.toFloat() / totalBytes
+                                } else {
+                                    0f
+                                }
+                                _downloadState.value = DownloadState.Downloading(
+                                    modelId,
+                                    progress,
+                                    downloadedBytes,
+                                    totalBytes,
+                                )
+                                updateNotification(modelName, progress)
+                            }
+
+                            if (!tempFile!!.renameTo(targetFile)) {
+                                tempFile!!.copyTo(targetFile, overwrite = true)
+                            }
+                            tempFile!!.delete()
+                            tempFile = null
+                        }
+                    }
                 }
 
-                tempFile.delete()
+                tempFile?.delete()
                 tempFile = null
 
                 _downloadState.value = DownloadState.Success(modelId)
@@ -185,11 +240,6 @@ class ModelDownloadService : Service() {
                     stopSelf()
                 }
             } catch (e: CancellationException) {
-                // Cancellation (service reclaimed, a new download started, or
-                // explicit cancel) is not a download failure: re-throw so it is
-                // not surfaced as an "Error" state. Emitting Error here is what
-                // produced the spurious "Job was cancelled" snackbar that could
-                // appear right after a successful download finished.
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "Download failed", e)
@@ -259,6 +309,59 @@ class ModelDownloadService : Service() {
 
             // Guard against silently truncated downloads: a dropped connection
             // ends the read loop without throwing, leaving a partial file.
+            if (totalBytes > 0 && downloadedBytes != totalBytes) {
+                throw Exception(
+                    getString(R.string.error_download_failed, "$downloadedBytes/$totalBytes"),
+                )
+            }
+        }
+    }
+
+    private suspend fun downloadFileWithProgress(
+        url: String,
+        destFile: File,
+        modelName: String,
+        onProgress: (Long) -> Unit,
+    ) = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url(url)
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw Exception(getString(R.string.error_download_failed, response.code.toString()))
+            }
+
+            val body = response.body ?: throw Exception("Response body is null")
+            val totalBytes = body.contentLength()
+            var downloadedBytes = 0L
+            var lastUpdateTime = 0L
+
+            java.io.BufferedOutputStream(FileOutputStream(destFile)).use { output ->
+                body.byteStream().buffered().use { input ->
+                    val buffer = ByteArray(32 * 1024)
+                    var bytes: Int
+
+                    while (input.read(buffer).also { bytes = it } != -1) {
+                        output.write(buffer, 0, bytes)
+                        downloadedBytes += bytes
+
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastUpdateTime >= 500 || downloadedBytes == totalBytes) {
+                            lastUpdateTime = currentTime
+                            onProgress(downloadedBytes)
+
+                            val progress = if (totalBytes > 0) {
+                                downloadedBytes.toFloat() / totalBytes
+                            } else {
+                                0f
+                            }
+                            updateNotification(modelName, progress)
+                        }
+                    }
+                }
+            }
+
             if (totalBytes > 0 && downloadedBytes != totalBytes) {
                 throw Exception(
                     getString(R.string.error_download_failed, "$downloadedBytes/$totalBytes"),

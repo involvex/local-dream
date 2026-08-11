@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -24,7 +26,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.involvex.localdreamchat.data.MigrationState
+import com.involvex.localdreamchat.data.db.AppDatabase
+import com.involvex.localdreamchat.data.repository.ChatRepository
 import com.involvex.localdreamchat.navigation.Screen
+import com.involvex.localdreamchat.ui.screens.CharacterListScreen
+import com.involvex.localdreamchat.ui.screens.ChatScreen
 import com.involvex.localdreamchat.ui.screens.HistoryScreen
 import com.involvex.localdreamchat.ui.screens.MigrationScreen
 import com.involvex.localdreamchat.ui.screens.ModelListScreen
@@ -205,6 +211,28 @@ private fun AppContent() {
         }
         composable(Screen.RemoteLink.route) {
             RemoteScreen(navController)
+        }
+        composable(Screen.CharacterList.route) {
+            val context = LocalContext.current
+            val repository = remember { ChatRepository.get(AppDatabase.get(context)) }
+            CharacterListScreen(
+                navController = navController,
+                repository = repository,
+            )
+        }
+        composable(
+            route = Screen.Chat.route,
+            arguments = listOf(
+                navArgument("characterId") {
+                    type = NavType.StringType
+                },
+            ),
+        ) { backStackEntry ->
+            val characterId = backStackEntry.arguments?.getString("characterId") ?: ""
+            ChatScreen(
+                navController = navController,
+                characterId = characterId,
+            )
         }
     }
 }

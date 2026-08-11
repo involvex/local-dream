@@ -1005,6 +1005,16 @@ fun ModelListScreen(navController: NavController, modifier: Modifier = Modifier)
                                 },
                             )
                             DropdownMenuItem(
+                                text = { Text("AI Chat") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.Chat, contentDescription = null)
+                                },
+                                onClick = {
+                                    menuExpanded = false
+                                    navController.navigate(Screen.CharacterList.route)
+                                },
+                            )
+                            DropdownMenuItem(
                                 text = { Text(stringResource(R.string.settings)) },
                                 leadingIcon = {
                                     Icon(Icons.Default.Settings, contentDescription = null)

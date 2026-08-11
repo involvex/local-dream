@@ -4,6 +4,7 @@ import android.app.Application
 import com.involvex.localdreamchat.data.HistoryMigration
 import com.involvex.localdreamchat.data.MigrationState
 import com.involvex.localdreamchat.data.db.AppDatabase
+import com.involvex.localdreamchat.data.repository.ChatRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -25,6 +26,18 @@ class LocalDreamApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         startMigration()
+        seedChatCharacters()
+    }
+
+    private fun seedChatCharacters() {
+        appScope.launch {
+            try {
+                val db = AppDatabase.get(this@LocalDreamApplication)
+                ChatRepository.get(db).seedIfEmpty()
+            } catch (e: Exception) {
+                // Non-fatal: characters just won't appear
+            }
+        }
     }
 
     private fun startMigration() {

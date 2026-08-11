@@ -8,12 +8,20 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
-    entities = [HistoryEntity::class],
-    version = 3,
+    entities = [
+        HistoryEntity::class,
+        CharacterEntity::class,
+        ConversationEntity::class,
+        ChatMessageEntity::class,
+    ],
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun historyDao(): HistoryDao
+    abstract fun characterDao(): CharacterDao
+    abstract fun conversationDao(): ConversationDao
+    abstract fun chatMessageDao(): ChatMessageDao
 
     companion object {
         @Volatile
@@ -80,13 +88,74 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        // v3 -> v4: add AI chat tables.
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS characters (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        personality TEXT NOT NULL,
+                        avatarEmoji TEXT NOT NULL DEFAULT '',
+                        systemPrompt TEXT NOT NULL,
+                        imageTriggerKeywords TEXT NOT NULL DEFAULT '',
+                        isFavorite INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent(),
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS conversations (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        characterId TEXT NOT NULL,
+                        title TEXT NOT NULL DEFAULT '',
+                        lastMessage TEXT NOT NULL DEFAULT '',
+                        lastMessageTime INTEGER NOT NULL DEFAULT 0,
+                        messageCount INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (characterId) REFERENCES characters(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_conversations_characterId ON conversations (characterId)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_conversations_lastMessageTime ON conversations (lastMessageTime)",
+                )
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS chat_messages (
+                        id TEXT NOT NULL PRIMARY KEY,
+                        conversationId TEXT NOT NULL,
+                        role TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        timestamp INTEGER NOT NULL,
+                        imagePath TEXT,
+                        isGenerating INTEGER NOT NULL DEFAULT 0,
+                        FOREIGN KEY (conversationId) REFERENCES conversations(id) ON DELETE CASCADE
+                    )
+                    """.trimIndent(),
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_chat_messages_conversationId ON chat_messages (conversationId)",
+                )
+                db.execSQL(
+                    "CREATE INDEX IF NOT EXISTS index_chat_messages_timestamp ON chat_messages (timestamp)",
+                )
+            }
+        }
+
         fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
             INSTANCE ?: Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
                 "local_dream.db",
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 // No destructive fallback: a future schema bump without a
                 // matching migration should fail loudly at open time rather
                 // than silently dropping the user's whole generation history.
