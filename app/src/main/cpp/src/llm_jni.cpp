@@ -1,9 +1,15 @@
 #include <jni.h>
+#include <android/log.h>
 #include <string>
 #include <mutex>
 #include <atomic>
+#include <sstream>
+
+#include <nlohmann/json.hpp>
 
 #include "llm/llm.hpp"
+
+#define ALOGE(...) __android_log_print(ANDROID_LOG_ERROR, "LocalDreamLLM", __VA_ARGS__)
 
 using namespace MNN::Transformer;
 
@@ -140,6 +146,41 @@ Java_com_involvex_localdreamchat_service_LlmNative_nativeSetConfig(
     std::string result = llm->set_config(std::string(config_str)) ? "ok" : "error";
     env->ReleaseStringUTFChars(config_json, config_str);
     return env->NewStringUTF(result.c_str());
+}
+
+// Multi-turn chat: messages_json is a JSON array of {role, content}. MNN
+// applies the model's chat template across all turns, and the KV cache is
+// reset first so each call is a stateless full-transcript generation.
+JNIEXPORT jstring JNICALL
+Java_com_involvex_localdreamchat_service_LlmNative_nativeResponseChat(
+    JNIEnv *env, jobject thiz, jlong ptr, jstring messages_json, jint max_tokens) {
+    std::lock_guard<std::mutex> lock(g_llm_mutex);
+    Llm *llm = reinterpret_cast<Llm *>(ptr);
+    if (!llm) return env->NewStringUTF("");
+
+    const char *mj = env->GetStringUTFChars(messages_json, nullptr);
+    if (!mj) return env->NewStringUTF("");
+    std::string json_str(mj);
+    env->ReleaseStringUTFChars(messages_json, mj);
+
+    try {
+        nlohmann::json parsed = nlohmann::json::parse(json_str);
+        ChatMessages prompts;
+        for (const auto &item : parsed) {
+            prompts.emplace_back(
+                item.at("role").get<std::string>(),
+                item.at("content").get<std::string>());
+        }
+
+        llm->reset();
+
+        std::ostringstream output;
+        llm->response(prompts, &output, nullptr, max_tokens);
+        return env->NewStringUTF(output.str().c_str());
+    } catch (const std::exception &e) {
+        ALOGE("nativeResponseChat failed: %s", e.what());
+        return env->NewStringUTF("");
+    }
 }
 
 } // extern "C"

@@ -93,7 +93,7 @@ internal suspend fun checkBackendHealth(
     servingModelId: StateFlow<String?>,
     expectedModelId: String,
     onHealthy: () -> Unit,
-    onUnhealthy: () -> Unit,
+    onUnhealthy: (String?) -> Unit,
 ) = withContext(Dispatchers.IO) {
     try {
         val startTime = System.currentTimeMillis()
@@ -119,8 +119,9 @@ internal suspend fun checkBackendHealth(
                 // survive to the next iteration; a genuine failure does.
                 ownErrorStreak++
                 if (ownErrorStreak >= 2) {
+                    val errorMsg = state.message
                     withContext(Dispatchers.Main) {
-                        onUnhealthy()
+                        onUnhealthy(errorMsg)
                     }
                     break
                 }
@@ -129,7 +130,7 @@ internal suspend fun checkBackendHealth(
 
                 if (System.currentTimeMillis() - startTime > timeoutDuration) {
                     withContext(Dispatchers.Main) {
-                        onUnhealthy()
+                        onUnhealthy("Backend start timeout")
                     }
                     break
                 }
@@ -161,7 +162,7 @@ internal suspend fun checkBackendHealth(
         }
     } catch (e: Exception) {
         withContext(Dispatchers.Main) {
-            onUnhealthy()
+            onUnhealthy("Health check failed: ${e.message}")
         }
     }
 }

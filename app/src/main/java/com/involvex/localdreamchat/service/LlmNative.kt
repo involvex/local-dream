@@ -7,7 +7,7 @@ package com.involvex.localdreamchat.service
 class LlmNative {
     companion object {
         init {
-            System.loadLibrary("stable_diffusion_core")
+            System.loadLibrary("localdream_llm")
         }
 
         @JvmStatic
@@ -18,6 +18,13 @@ class LlmNative {
 
         @JvmStatic
         external fun nativeResponse(ptr: Long, prompt: String, maxTokens: Int): String
+
+        @JvmStatic
+        external fun nativeResponseChat(
+            ptr: Long,
+            messagesJson: String,
+            maxTokens: Int,
+        ): String
 
         @JvmStatic
         external fun nativeResponseStream(

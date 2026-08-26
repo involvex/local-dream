@@ -790,9 +790,18 @@ int main(int argc, char **argv) {
   registerUpscaleEndpoint(svr);
   if (text_encoder) registerTokenizeEndpoint(svr, text_encoder.get());
 
-  std::cout << "Server listening on " << opts.listen_address << ":" << opts.port
+  std::cout << "Binding server on " << opts.listen_address << ":" << opts.port
             << std::endl;
-  svr.listen(opts.listen_address.c_str(), opts.port);
+  if (!svr.listen(opts.listen_address.c_str(), opts.port)) {
+    // Most commonly EADDRINUSE: something else (e.g. an `adb reverse`
+    // tunnel) already holds the port. Exiting 0 here made the failure look
+    // like a clean start while every HTTP call silently hit the squatter.
+    // Exit code 2 is a sentinel the Android service maps to a targeted
+    // "port in use" message; do not reuse it for other failures.
+    std::cout << "FATAL: could not bind " << opts.listen_address << ":"
+              << opts.port << " - port is already in use?" << std::endl;
+    return 2;
+  }
 
   // --- Cleanup ---
   pipeline.reset();

@@ -115,6 +115,37 @@ class LlmService(private val context: Context) {
     }
 
     /**
+     * Multi-turn chat generation: passes the full transcript (system +
+     * history + latest user message) through the model's chat template and
+     * resets the KV cache per call, so responses depend on the actual
+     * conversation instead of degrading across turns.
+     */
+    suspend fun generateChat(
+        messages: List<LlmChatMessage>,
+        maxTokens: Int = DEFAULT_MAX_TOKENS,
+    ): String = withContext(Dispatchers.Default) {
+        if (nativePtr == 0L || messages.isEmpty()) return@withContext ""
+        val payload = org.json.JSONArray().apply {
+            for (message in messages) {
+                put(
+                    org.json.JSONObject()
+                        .put("role", message.role)
+                        .put("content", message.content),
+                )
+            }
+        }
+        _isGenerating.value = true
+        try {
+            LlmNative.nativeResponseChat(nativePtr, payload.toString(), maxTokens)
+        } catch (e: Exception) {
+            Log.e(TAG, "Chat generation failed", e)
+            ""
+        } finally {
+            _isGenerating.value = false
+        }
+    }
+
+    /**
      * Generate a response with streaming token callbacks.
      */
     fun generateStream(

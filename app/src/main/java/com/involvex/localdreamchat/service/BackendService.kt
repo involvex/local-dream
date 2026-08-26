@@ -61,6 +61,10 @@ class BackendService : Service() {
         private const val NOTIFICATION_ID = 2
         private const val CHANNEL_ID = "backend_service_channel"
 
+        // Sentinel exit code from the native backend when it cannot bind its
+        // listen port (main.cpp). Must stay in sync with that return value.
+        private const val BACKEND_EXIT_PORT_IN_USE = 2
+
         // Grace window before a stop request actually tears the backend down.
         // A re-entry within this window (same or different model) cancels the
         // teardown and reconciles in-place, so quick back-then-reopen reuses
@@ -267,6 +271,12 @@ class BackendService : Service() {
             serving = null
             updateServing(null)
             updateState(BackendState.Error("Backend start failed", want.modelId))
+            // If the failed config is still the desired one, stop the service
+            // to clear the foreground notification. A new start request will
+            // create a new service instance if needed.
+            if (desired == want) {
+                requestStop(0)
+            }
         }
     }
 
@@ -595,9 +605,19 @@ class BackendService : Service() {
             // we didn't intentionally stop it; a torn-down or superseded process
             // exiting is expected and must not poison the shared backendState.
             if (isLiveCrash(proc)) {
+                val errorMessage = when {
+                    exitCode == BACKEND_EXIT_PORT_IN_USE ->
+                        "Port 8081 is already in use by another process. If you used 'adb reverse tcp:8081', remove it with 'adb reverse --remove-all' and reopen the app."
+
+                    exitCode == 132 -> "Backend crashed (SIGILL: illegal instruction). This device's CPU may not be compatible with the CPU backend. Try using an NPU model if available, or check for app updates."
+
+                    exitCode == 139 -> "Backend crashed (SIGSEGV: segmentation fault). This may be a model compatibility issue."
+
+                    else -> "Backend process exited with code: $exitCode"
+                }
                 updateState(
                     BackendState.Error(
-                        "Backend process exited with code: $exitCode",
+                        errorMessage,
                         servingModelId.value,
                     ),
                 )

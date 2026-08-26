@@ -14,15 +14,12 @@
                 "CMAKE_SYSTEM_NAME": "Android",
                 "ANDROID_NATIVE_API_LEVEL": "21",
                 "CMAKE_SYSTEM_VERSION": "21",
-                "CMAKE_ANDROID_NDK": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c",
+                "CMAKE_ANDROID_NDK": "$env{ANDROID_NDK_ROOT}",
                 "CMAKE_C_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             },
-            "toolchainFile": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c/build/cmake/android.toolchain.cmake",
-            "environment": {
-                "ANDROID_NDK_ROOT": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c"
-            }
+            "toolchainFile": "$env{ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake"
         },
         {
             "name": "android-debug",
@@ -41,36 +38,6 @@
                 "CMAKE_BUILD_TYPE": "Release",
                 "QNN_DEBUG_ENABLE": "OFF"
             }
-        },
-        {
-            "name": "llm-debug",
-            "binaryDir": "${sourceDir}/build/llm",
-            "generator": "Ninja",
-            "cacheVariables": {
-                "CMAKE_ANDROID_ARCH_ABI": "arm64-v8a",
-                "ANDROID_ABI": "arm64-v8a",
-                "ANDROID_PLATFORM": "android-21",
-                "ANDROID_STL": "c++_static",
-                "CMAKE_SYSTEM_NAME": "Android",
-                "ANDROID_NATIVE_API_LEVEL": "21",
-                "CMAKE_SYSTEM_VERSION": "21",
-                "CMAKE_ANDROID_NDK": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c",
-                "CMAKE_C_COMPILER_LAUNCHER": "ccache",
-                "CMAKE_CXX_COMPILER_LAUNCHER": "ccache",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-            },
-            "toolchainFile": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c/build/cmake/android.toolchain.cmake",
-            "environment": {
-                "ANDROID_NDK_ROOT": "C:/Program Files (x86)/Android/AndroidNDK/android-ndk-r27c"
-            }
-        },
-        {
-            "name": "llm-release",
-            "inherits": "llm-debug",
-            "binaryDir": "${sourceDir}/build/llm",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
-            }
         }
     ],
     "buildPresets": [
@@ -81,10 +48,6 @@
         {
             "name": "android-release",
             "configurePreset": "android-release"
-        },
-        {
-            "name": "llm-release",
-            "configurePreset": "llm-release"
         }
     ]
 }

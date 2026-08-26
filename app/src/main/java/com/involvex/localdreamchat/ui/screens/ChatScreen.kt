@@ -6,7 +6,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,173 +20,236 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.involvex.localdreamchat.R
-import com.involvex.localdreamchat.data.LlmModel
-import com.involvex.localdreamchat.data.db.AppDatabase
+import com.involvex.localdreamchat.data.model.ChatCharacter
 import com.involvex.localdreamchat.data.model.ChatMessage
-import com.involvex.localdreamchat.data.repository.ChatRepository
-import com.involvex.localdreamchat.navigation.popBackStackIfResumed
-import com.involvex.localdreamchat.service.LlmState
-import com.involvex.localdreamchat.service.ModelDownloadService
+import com.involvex.localdreamchat.data.model.Conversation
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val CenterVertically: Alignment.Vertical = Alignment.CenterVertically
+
+@Stable
 @Composable
 fun ChatScreen(
-    navController: NavController,
-    characterId: String,
+    conversation: Conversation?,
+    character: ChatCharacter?,
+    model: String,
+    messages: List<ChatMessage>,
+    isGenerating: Boolean,
+    isGeneratingImage: Boolean,
+    loadingLLM: Boolean,
+    loadingImage: Boolean,
+    hasImage: Boolean,
+    showImageGenerationButton: Boolean,
+    onGenerateImage: () -> Unit,
+    onSendMessage: (String) -> Unit,
+    onBackPressed: () -> Unit,
+    imageGenerationError: String? = null,
+    onDismissImageGenerationError: () -> Unit = {},
+    onImageGenerationError: (String) -> Unit,
 ) {
-    val context = LocalContext.current
-    val repository = remember { ChatRepository.get(AppDatabase.get(context)) }
-    val viewModel = remember {
-        ChatViewModel(context.applicationContext as android.app.Application, characterId)
-    }
+    val textFieldValue = remember { mutableStateOf("") }
 
-    val character by viewModel.character.collectAsState()
-    val messages by viewModel.messages.collectAsState()
-    val isGenerating by viewModel.isGenerating.collectAsState()
-    val llmState by viewModel.llmState.collectAsState()
-    val isGeneratingImage by viewModel.isGeneratingImage.collectAsState()
-    val imageGenerationError by viewModel.imageGenerationError.collectAsState()
-    val downloadState by ModelDownloadService.downloadState.collectAsState()
+    val lazyListState = rememberLazyListState()
 
-    val modelInstalled = viewModel.isModelDownloaded()
-    val llmModel = LlmModel.DEFAULT_MODEL
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Top bar
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = CenterVertically,
+        ) {
+            // Back button
+            IconButton(
+                onClick = onBackPressed,
+                enabled = !isGenerating && !isGeneratingImage,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
 
-    var inputText by remember { mutableStateOf(TextFieldValue("")) }
-    val listState = rememberLazyListState()
-
-    // Auto-scroll to bottom when new messages arrive
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // Character avatar
-                        Box(
-                            contentAlignment = Alignment.Center,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                        ) {
-                            Text(
-                                text = character?.avatarEmoji ?: "",
-                                fontSize = 18.sp,
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = character?.name ?: "Chat",
-                                style = MaterialTheme.typography.titleMedium,
-                            )
-                            // Show LLM status
-                            val statusText = when (llmState) {
-                                is LlmState.Unloaded -> {
-                                    if (viewModel.isModelDownloaded()) {
-                                        "Tap ⚡ to load AI"
-                                    } else {
-                                        "LLM model not installed"
-                                    }
-                                }
-
-                                is LlmState.Loading -> "Loading AI model..."
-
-                                is LlmState.Ready -> "AI ready"
-
-                                is LlmState.Error -> "AI: ${(llmState as LlmState.Error).message.take(30)}"
-                            }
-                            Text(
-                                text = statusText,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStackIfResumed() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(),
+            // Title
+            Text(
+                text = character?.name ?: "Chat",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
             )
-        },
-    ) { padding ->
+
+            // Model select
+            Text(
+                text = "Model: $model",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+
+        // Messages area
+        LazyColumn(
+            state = lazyListState,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            reverseLayout = true,
+        ) {
+            items(
+                items = messages,
+                key = { it.id },
+            ) { msg ->
+                MessageItem(
+                    message = msg,
+                    character = character,
+                )
+            }
+        }
+
+        // Loading indicator
+        if (isGenerating && !isGeneratingImage) {
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(2.dp),
+            )
+        }
+
+        // Image-generation / LLM error banner
+        if (imageGenerationError != null) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = MaterialTheme.shapes.small,
+                color = MaterialTheme.colorScheme.errorContainer,
+            ) {
+                Row(
+                    modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                    verticalAlignment = CenterVertically,
+                ) {
+                    Text(
+                        text = imageGenerationError,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(onClick = onDismissImageGenerationError) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = "Dismiss",
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                    }
+                }
+            }
+        }
+
+        // Input area
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .imePadding(),
+                .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
+                .padding(16.dp),
         ) {
-            // Messages list
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = CenterVertically,
             ) {
-                items(messages, key = { it.id }) { message ->
-                    MessageBubble(
-                        message = message,
-                        characterEmoji = character?.avatarEmoji ?: "",
-                    )
-                }
+                TextField(
+                    value = textFieldValue.value,
+                    onValueChange = { value ->
+                        textFieldValue.value = value
+                    },
+                    placeholder = { Text("Type a message...") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !isGenerating && !isGeneratingImage,
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                    ),
+                )
 
-                // Loading indicator
-                if (isGenerating) {
-                    item {
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Send button
+                IconButton(
+                    onClick = {
+                        if (textFieldValue.value.isNotBlank() && !isGenerating) {
+                            onSendMessage(textFieldValue.value)
+                            textFieldValue.value = ""
+                        }
+                    },
+                    enabled = !isGenerating && !isGeneratingImage && textFieldValue.value.isNotBlank(),
+                ) {
+                    if (loadingLLM) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.dp,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = if (textFieldValue.value.isNotBlank() && !isGenerating) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                }
+            }
+
+            // Image generation button
+            if (showImageGenerationButton && character != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val isEnabled = !isGenerating && !isGeneratingImage
+
+                    val isLoading = isGeneratingImage
+
+                    if (isLoading) {
                         Row(
-                            modifier = Modifier.padding(start = 16.dp, top = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            verticalAlignment = CenterVertically,
+                            horizontalArrangement = Arrangement.Center,
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
@@ -195,191 +257,39 @@ fun ChatScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Thinking...",
+                                text = "Generating image...",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
-                    }
-                }
-            }
-
-            // Download card (only shown when LLM model is not installed and not downloading)
-            if (!modelInstalled) {
-                val isDownloading = downloadState is ModelDownloadService.DownloadState.Downloading
-                val isExtracting = downloadState is ModelDownloadService.DownloadState.Extracting
-                val progress = if (downloadState is ModelDownloadService.DownloadState.Downloading) {
-                    (downloadState as ModelDownloadService.DownloadState.Downloading).progress
-                } else {
-                    0f
-                }
-
-                Surface(
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    shape = RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = stringResource(R.string.llm_model_not_installed),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = llmModel.name,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = llmModel.approximateSize,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.5f),
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        when {
-                            isDownloading -> {
-                                LinearProgressIndicator(
-                                    progress = { progress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Downloading... ${(progress * 100).toInt()}%",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                )
-                            }
-
-                            isExtracting -> {
-                                LinearProgressIndicator(
-                                    progress = { 0.9f },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Extracting files...",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f),
-                                )
-                            }
-
-                            else -> {
-                                TextButton(
-                                    onClick = {
-                                        llmModel.startDownload(context, llmModel.baseUrl)
-                                    },
+                    } else {
+                        AssistChip(
+                            onClick = {
+                                if (isEnabled) {
+                                    onGenerateImage()
+                                }
+                            },
+                            label = {
+                                Row(
+                                    verticalAlignment = CenterVertically,
                                 ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Image,
+                                        contentDescription = null,
+                                        tint = if (isEnabled) {
+                                            MaterialTheme.colorScheme.primary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = stringResource(R.string.download_llm_model),
-                                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                        "Generate ${character.name}",
+                                        style = MaterialTheme.typography.bodyMedium,
                                     )
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Input area
-            Surface(
-                tonalElevation = 3.dp,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .navigationBarsPadding(),
-                    verticalAlignment = Alignment.Bottom,
-                ) {
-                    // Load model button when unloaded
-                    if (llmState is LlmState.Unloaded && viewModel.isModelDownloaded()) {
-                        IconButton(
-                            onClick = { viewModel.loadModel() },
-                            modifier = Modifier.padding(end = 4.dp),
-                        ) {
-                            Text("⚡", fontSize = 20.sp)
-                        }
-                    }
-
-                    TextField(
-                        value = inputText,
-                        onValueChange = { inputText = it },
-                        modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(24.dp)),
-                        placeholder = {
-                            val placeholderText = when {
-                                llmState is LlmState.Error -> "AI error: ${(llmState as LlmState.Error).message.take(20)}"
-                                !viewModel.isModelDownloaded() -> "Download LLM model to chat"
-                                llmState is LlmState.Unloaded -> "Tap ⚡ to load AI"
-                                llmState is LlmState.Loading -> "Loading..."
-                                else -> "Message ${character?.name ?: ""}..."
-                            }
-                            Text(text = placeholderText)
-                        },
-                        colors = TextFieldDefaults.colors(
-                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            focusedIndicatorColor = Color.Transparent,
-                            unfocusedIndicatorColor = Color.Transparent,
-                        ),
-                        maxLines = 4,
-                        enabled = !isGenerating && llmState is LlmState.Ready,
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    // Image generation button
-                    IconButton(
-                        onClick = {
-                            character?.let { char ->
-                                viewModel.generateCharacterImage()
-                            }
-                        },
-                        enabled = !isGenerating && !isGeneratingImage && llmState is LlmState.Ready,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Image,
-                            contentDescription = "Generate image",
-                            tint = if (!isGenerating && !isGeneratingImage && llmState is LlmState.Ready) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
                             },
-                        )
-                    }
-
-                    IconButton(
-                        onClick = {
-                            val text = inputText.text
-                            if (text.isNotBlank() && !isGenerating) {
-                                viewModel.sendMessage(text)
-                                inputText = TextFieldValue("")
-                            }
-                        },
-                        enabled = inputText.text.isNotBlank() && !isGenerating &&
-                            llmState is LlmState.Ready,
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
-                            contentDescription = "Send",
-                            tint = if (inputText.text.isNotBlank() && !isGenerating) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
+                            enabled = isEnabled,
                         )
                     }
                 }
@@ -389,91 +299,76 @@ fun ChatScreen(
 }
 
 @Composable
-private fun MessageBubble(
+fun MessageItem(
     message: ChatMessage,
-    characterEmoji: String,
+    character: ChatCharacter?,
 ) {
     val isUser = message.role == "user"
+    val context = LocalContext.current
 
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(
+                horizontal = 16.dp,
+                vertical = 4.dp,
+            ),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
     ) {
-        if (!isUser) {
-            // Character avatar
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(32.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primaryContainer),
-            ) {
-                Text(text = characterEmoji, fontSize = 16.sp)
+        if (message.imagePath != null) {
+            val imageFile = File(context.filesDir, message.imagePath)
+            if (imageFile.exists()) {
+                val bitmap = BitmapFactory.decodeFile(imageFile.absolutePath)
+                if (bitmap != null) {
+                    Image(
+                        bitmap = bitmap.asImageBitmap(),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .widthIn(max = 240.dp)
+                            .height(200.dp),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
             }
-            Spacer(modifier = Modifier.width(8.dp))
         }
 
-        Column(
-            modifier = Modifier.widthIn(max = 280.dp),
-            horizontalAlignment = if (isUser) Alignment.End else Alignment.Start,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(
-                    topStart = if (isUser) 16.dp else 4.dp,
-                    topEnd = if (isUser) 4.dp else 16.dp,
-                    bottomStart = 16.dp,
-                    bottomEnd = 16.dp,
-                ),
-                color = if (isUser) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.secondaryContainer
-                },
-                tonalElevation = if (isUser) 0.dp else 1.dp,
+        if (message.content.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .background(
+                        if (isUser) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainer
+                        },
+                        shape = if (isUser) {
+                            RoundedCornerShape(16.dp, 4.dp, 16.dp, 16.dp)
+                        } else {
+                            RoundedCornerShape(4.dp, 16.dp, 16.dp, 16.dp)
+                        },
+                    )
+                    .padding(12.dp),
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column {
+                    if (!isUser && character != null) {
+                        Text(
+                            text = character.name,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                     Text(
                         text = message.content,
                         style = MaterialTheme.typography.bodyMedium,
                         color = if (isUser) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
-                            MaterialTheme.colorScheme.onSecondaryContainer
+                            MaterialTheme.colorScheme.onSurface
                         },
                     )
-
-                    // Show image if present
-                    message.imagePath?.let { path ->
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val bitmap = remember(path) {
-                            try {
-                                val file = File(path)
-                                if (file.exists()) {
-                                    BitmapFactory.decodeFile(path)
-                                } else {
-                                    null
-                                }
-                            } catch (_: Exception) {
-                                null
-                            }
-                        }
-                        bitmap?.let {
-                            Image(
-                                bitmap = it.asImageBitmap(),
-                                contentDescription = "Generated image",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.FillWidth,
-                            )
-                        }
-                    }
                 }
             }
-        }
-
-        if (isUser) {
-            Spacer(modifier = Modifier.width(8.dp))
         }
     }
 }

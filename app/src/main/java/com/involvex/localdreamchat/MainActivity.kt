@@ -1,6 +1,7 @@
 package com.involvex.localdreamchat
 
 import android.Manifest
+import android.app.Application
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -14,12 +15,14 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -31,6 +34,7 @@ import com.involvex.localdreamchat.data.repository.ChatRepository
 import com.involvex.localdreamchat.navigation.Screen
 import com.involvex.localdreamchat.ui.screens.CharacterListScreen
 import com.involvex.localdreamchat.ui.screens.ChatScreen
+import com.involvex.localdreamchat.ui.screens.ChatViewModel
 import com.involvex.localdreamchat.ui.screens.HistoryScreen
 import com.involvex.localdreamchat.ui.screens.MigrationScreen
 import com.involvex.localdreamchat.ui.screens.ModelListScreen
@@ -166,6 +170,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+private fun chatViewModelFactory(
+    application: Application,
+    characterId: String,
+): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T = ChatViewModel(application, characterId) as T
+}
+
 @Composable
 private fun AppContent() {
     val navController = rememberNavController()
@@ -213,7 +225,7 @@ private fun AppContent() {
             RemoteScreen(navController)
         }
         composable(Screen.CharacterList.route) {
-            val context = LocalContext.current
+            val context = androidx.compose.ui.platform.LocalContext.current
             val repository = remember { ChatRepository.get(AppDatabase.get(context)) }
             CharacterListScreen(
                 navController = navController,
@@ -229,9 +241,51 @@ private fun AppContent() {
             ),
         ) { backStackEntry ->
             val characterId = backStackEntry.arguments?.getString("characterId") ?: ""
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val activity = context as ComponentActivity
+            val application = context.applicationContext as Application
+
+            val viewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
+                viewModelStoreOwner = activity,
+                factory = chatViewModelFactory(application, characterId),
+            )
+
+            val character by viewModel.character.collectAsState()
+            val conversation by viewModel.conversation.collectAsState()
+            val messages by viewModel.messages.collectAsState()
+            val isGenerating by viewModel.isGenerating.collectAsState()
+            val isGeneratingImage by viewModel.isGeneratingImage.collectAsState()
+            val loadingLLM by viewModel.loadingLLM.collectAsState()
+            val loadingImage by viewModel.loadingImage.collectAsState()
+            val hasImage by viewModel.hasImage.collectAsState()
+            val showImageGenerationButton by viewModel.showImageGenerationButton.collectAsState()
+            val imageGenerationError by viewModel.imageGenerationError.collectAsState()
+
+            val modelName = "SD1.5"
+
+            LaunchedEffect(characterId) {
+                viewModel.loadCharacter(characterId)
+            }
+
             ChatScreen(
-                navController = navController,
-                characterId = characterId,
+                conversation = conversation,
+                character = character,
+                model = modelName,
+                messages = messages,
+                isGenerating = isGenerating,
+                isGeneratingImage = isGeneratingImage,
+                loadingLLM = loadingLLM,
+                loadingImage = loadingImage,
+                hasImage = hasImage,
+                showImageGenerationButton = showImageGenerationButton && character != null,
+                onGenerateImage = { viewModel.generateCharacterImage() },
+                onSendMessage = { message ->
+                    viewModel.sendMessage(message)
+                },
+                onBackPressed = { navController.popBackStack() },
+                imageGenerationError = imageGenerationError,
+                onDismissImageGenerationError = { viewModel.onImageGenerationError("") },
+                onImageGenerationError = { error -> viewModel.onImageGenerationError(error) },
             )
         }
     }

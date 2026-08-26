@@ -74,6 +74,7 @@ private fun getDeviceSoc(): String = if (Build.VERSION.SDK_INT >= Build.VERSION_
 data class DownloadProgress(val progress: Float, val downloadedBytes: Long, val totalBytes: Long)
 
 val chipsetModelSuffixes = mapOf(
+    // Qualcomm Snapdragon
     "SM8475" to "8gen1",
     "SM8450" to "8gen1",
     "SM8550" to "8gen2",
@@ -88,6 +89,20 @@ val chipsetModelSuffixes = mapOf(
     "SM8850P" to "8gen2",
     "SM8735" to "8gen2",
     "SM8845" to "8gen2",
+    // MediaTek Dimensity (common in Poco/Xiaomi devices)
+    "MT6877" to "min", // Dimensity 1000/1000+
+    "MT6879" to "min", // Dimensity 1100
+    "MT6885" to "min", // Dimensity 1200
+    "MT6891" to "min", // Dimensity 1200/1300
+    "MT6893" to "min", // Dimensity 8000/8100
+    "MT6895" to "min", // Dimensity 9000
+    "MT6895Z" to "min", // Dimensity 9000+
+    "MT6983" to "min", // Dimensity 8050/8200
+    "MT6985" to "min", // Dimensity 8300
+    "MT6989" to "min", // Dimensity 9200
+    "MT6991" to "min", // Dimensity 9300
+    // Generic MediaTek prefix fallback
+    "MT" to "min",
 )
 
 sealed class DownloadResult {
@@ -140,10 +155,10 @@ data class Model(
     // Backend --type value; each type implies the full model file layout.
     val backendType: String
         get() = when {
-            isAnima -> "anima"
-            isSdxl -> "sdxl"
-            runOnCpu -> "sd15cpu"
-            else -> "sd15npu"
+            isAnima -> BACKEND_ANIMA
+            isSdxl -> BACKEND_SDXL
+            runOnCpu -> BACKEND_SD15_CPU
+            else -> BACKEND_SD15_NPU
         }
 
     fun startDownload(context: Context) {
@@ -232,6 +247,23 @@ data class Model(
     companion object {
         private const val MODELS_DIR = "models"
 
+        // Backend --type values passed to the native executable.
+        const val BACKEND_SD15_NPU = "sd15npu"
+        const val BACKEND_SD15_CPU = "sd15cpu"
+        const val BACKEND_SDXL = "sdxl"
+        const val BACKEND_ANIMA = "anima"
+
+        // CPU SD1.5 models in fallback order: when the preferred NPU model
+        // cannot run on this device, the first downloaded entry is used
+        // instead. IDs must match the createXxx registrations below.
+        val cpuFallbackModelIds = listOf(
+            "absoluterealitycpu",
+            "chilloutmixcpu",
+            "anythingv5cpu",
+            "qteamixcpu",
+            "cuteyukimixcpu",
+        )
+
         fun isDeviceSupported(): Boolean {
             val soc = getDeviceSoc()
             return getChipsetSuffix(soc) != null
@@ -250,7 +282,12 @@ data class Model(
             if (soc in chipsetModelSuffixes) {
                 return chipsetModelSuffixes[soc]
             }
+            // Qualcomm Snapdragon prefix
             if (soc.startsWith("SM")) {
+                return "min"
+            }
+            // MediaTek Dimensity prefix
+            if (soc.startsWith("MT")) {
                 return "min"
             }
             return null

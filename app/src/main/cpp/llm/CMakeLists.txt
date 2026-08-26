@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.18)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5)
-project(stable_diffusion_core C CXX)
+project(localdream_llm C CXX)
+
+# CMake >= 4 with the standalone NDK toolchain no longer injects libc++ into
+# link steps, producing undefined std::__ndk1 symbols. Link it explicitly for
+# every C++ target in scope.
+set(CMAKE_CXX_STANDARD_LIBRARIES "-lc++_static -lc++abi ${CMAKE_CXX_STANDARD_LIBRARIES}")
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -59,12 +64,13 @@ add_subdirectory(${MNN_ROOT_DIR} mnn_build EXCLUDE_FROM_ALL)
 set(OUTPUT_SUFFIX ${CMAKE_ANDROID_ARCH_ABI})
 set(PLATFORM_LIBS log android dl m)
 
-# shared library
-add_library(stable_diffusion_core SHARED
+# shared library (JNI, loaded by LlmNative.kt)
+add_library(localdream_llm SHARED
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/llm_jni.cpp
 )
 
-target_include_directories(stable_diffusion_core PRIVATE
+target_include_directories(localdream_llm PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../3rdparty/json/include
     ${MNN_ROOT_DIR}/include
     ${MNN_ROOT_DIR}/transformers/llm/engine/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
@@ -76,13 +82,13 @@ target_include_directories(stable_diffusion_core PRIVATE
     ${ZSTD_INCLUDE_DIR}
 )
 
-target_link_libraries(stable_diffusion_core
+target_link_libraries(localdream_llm
     PRIVATE
     ${PLATFORM_LIBS}
     MNN
     libzstd
 )
 
-set_target_properties(stable_diffusion_core PROPERTIES
+set_target_properties(localdream_llm PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/obj/local/${OUTPUT_SUFFIX}"
 )

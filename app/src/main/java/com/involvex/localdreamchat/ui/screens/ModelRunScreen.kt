@@ -1691,9 +1691,9 @@ fun ModelRunScreen(
                     isCheckingBackend = false
                     backendReady = true
                 },
-                onUnhealthy = {
+                onUnhealthy = { errorMsg ->
                     isCheckingBackend = false
-                    errorMessage = msgBackendFailed
+                    errorMessage = errorMsg ?: msgBackendFailed
                 },
             )
         }

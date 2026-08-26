@@ -14,6 +14,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.graphics.createBitmap
 import com.involvex.localdreamchat.R
 import com.involvex.localdreamchat.utils.Http
+import com.involvex.localdreamchat.utils.rgbBytesToPixels
 import java.io.BufferedReader
 import java.io.File
 import java.io.IOException
@@ -527,28 +528,27 @@ class BackgroundGenerationService : Service() {
                 updateState(GenerationState.Idle)
             } else {
                 Log.e("GenerationService", "generation error", e)
+                // A refused connection to the local backend almost always means
+                // the native process died before binding its port. Prefer
+                // BackendService's crash description (e.g. SIGILL/SIGSEGV
+                // detail) over the raw socket error so the user sees the real
+                // cause instead of a generic connection message.
+                val errorMessage = if (e is java.net.ConnectException &&
+                    backendHost == LOCAL_BACKEND_HOST
+                ) {
+                    (BackendService.backendState.value as? BackendService.BackendState.Error)
+                        ?.message
+                        ?: e.message ?: getString(R.string.unknown_error)
+                } else {
+                    e.message ?: getString(R.string.unknown_error)
+                }
                 updateState(
-                    GenerationState.Error(
-                        e.message ?: this@BackgroundGenerationService.getString(R.string.unknown_error),
-                    ),
+                    GenerationState.Error(errorMessage),
                 )
             }
             stopSelf()
         } finally {
             activeCall = null
-        }
-    }
-
-    // Expands packed RGB bytes into ARGB ints; stops at whichever buffer ends
-    // first so a short payload can never index out of bounds.
-    private fun rgbBytesToPixels(rgb: ByteArray, pixels: IntArray) {
-        val count = minOf(pixels.size, rgb.size / 3)
-        for (i in 0 until count) {
-            val index = i * 3
-            val r = rgb[index].toInt() and 0xFF
-            val g = rgb[index + 1].toInt() and 0xFF
-            val b = rgb[index + 2].toInt() and 0xFF
-            pixels[i] = (0xFF shl 24) or (r shl 16) or (g shl 8) or b
         }
     }
 

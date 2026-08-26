@@ -4,20 +4,33 @@ project(libstable_diffusion_core.so C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# QNN SDK PATH
-set(QNN_SDK_ROOT /data/qairt/2.39.0.250926)
+# CMake >= 4 with the standalone NDK toolchain no longer injects libc++ into
+# link steps, producing undefined std::__ndk1 symbols. Link it explicitly for
+# every C++ target in scope.
+set(CMAKE_CXX_STANDARD_LIBRARIES "-lc++_static -lc++abi ${CMAKE_CXX_STANDARD_LIBRARIES}")
 
-file(COPY ${QNN_SDK_ROOT}/examples/QNN/SampleApp/SampleApp/
-    DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SampleApp)
-execute_process(COMMAND git apply --directory=app/src/main/cpp/ --verbose ${CMAKE_CURRENT_SOURCE_DIR}/SampleApp.patch
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    RESULT_VARIABLE patch_result
-    OUTPUT_VARIABLE patch_output
-    ERROR_VARIABLE patch_error
-)
-message(STATUS "Patch: ${patch_result}")
-message(STATUS "Patch: ${patch_output}")
-message(STATUS "Patch: ${patch_error}")
+# QNN SDK PATH (override with -DQNN_SDK_ROOT=/path/to/qairt)
+if(NOT DEFINED QNN_SDK_ROOT)
+    set(QNN_SDK_ROOT /data/qairt/2.39.0.250926)
+endif()
+
+# Populate the QNN SampleApp sources once. Re-copying on every configure
+# would clobber the applied patch with pristine SDK sources (the git apply
+# below can fail silently depending on host/EOL), so only bootstrap when the
+# tree is absent.
+if(NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SampleApp/src/QnnSampleApp.cpp)
+    file(COPY ${QNN_SDK_ROOT}/examples/QNN/SampleApp/SampleApp/
+        DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/SampleApp)
+    execute_process(COMMAND git apply --directory=app/src/main/cpp/ --verbose ${CMAKE_CURRENT_SOURCE_DIR}/SampleApp.patch
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        RESULT_VARIABLE patch_result
+        OUTPUT_VARIABLE patch_output
+        ERROR_VARIABLE patch_error
+    )
+    message(STATUS "Patch: ${patch_result}")
+    message(STATUS "Patch: ${patch_output}")
+    message(STATUS "Patch: ${patch_error}")
+endif()
 
 make_directory(${CMAKE_CURRENT_BINARY_DIR}/qnnlibs)
 file(COPY ${QNN_SDK_ROOT}/lib/aarch64-android/libQnnHtp.so
@@ -61,7 +74,9 @@ file(COPY ${QNN_SDK_ROOT}/lib/hexagon-v81/unsigned/libQnnHtpV81.so
 file(COPY ${QNN_SDK_ROOT}/lib/hexagon-v81/unsigned/libQnnHtpV81Skel.so
     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/qnnlibs)
 
-if(WIN32)
+# Detect the HOST toolchain tag (WIN32 reflects the *target* system, which is
+# always Android here)
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
     set(PLATFORM_NAME "windows")
     set(HOST_TAG "windows-x86_64")
 else()
@@ -105,17 +120,20 @@ set(MNN_CPU_WEIGHT_DEQUANT_GEMM ON CACHE BOOL "" FORCE)
 set(MNN_BUILD_FOR_ANDROID ON CACHE BOOL "" FORCE)
 set(MNN_BUILD_FOR_ANDROID_COMMAND ON CACHE BOOL "" FORCE)
 set(MNN_USE_LOGCAT OFF CACHE BOOL "" FORCE)
-set(MNN_OPENCL ON CACHE BOOL "" FORCE)
+set(MNN_OPENCL OFF CACHE BOOL "" FORCE)
 set(MNN_SUPPORT_TRANSFORMER_FUSE ON CACHE BOOL "" FORCE)
-set(MNN_BUILD_LLM ON CACHE BOOL "" FORCE)
-set(LLM_USE_MINJA ON CACHE BOOL "" FORCE)
+# Disable ARMv8.2 FP16 kernels - causes SIGILL on MediaTek MT6991 (Dimensity 9300)
+set(MNN_ARM82 OFF CACHE BOOL "" FORCE)
+# Disable OpenMP - not needed for single-threaded inference
+set(MNN_OPENMP OFF CACHE BOOL "" FORCE)
+# Disable BF16 - requires ARMv8.6+, causes issues on some devices
+set(MNN_SUPPORT_BF16 OFF CACHE BOOL "" FORCE)
 add_subdirectory(3rdparty/MNN)
 
 set(XTENSOR_USE_XSIMD ON)
 
 set(PACKAGE_INCLUDES
     ${MNN_ROOT_DIR}/include
-    ${MNN_ROOT_DIR}/transformers/llm/engine/include
     ${QNN_SDK_ROOT}/include/QNN
     ${CMAKE_CURRENT_SOURCE_DIR}/include/
     ${CMAKE_CURRENT_SOURCE_DIR}/src
@@ -161,7 +179,6 @@ set(SRC_DIR_WRAPPER_UTILS ${SRC_DIR}/WrapperUtils)
 # collect source files
 file(GLOB SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/llm_jni.cpp"
     # "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
     "${SRC_DIR}/QnnSampleApp.cpp"
     "${SRC_DIR_LOG}/*.cpp"
@@ -178,8 +195,9 @@ else()
     add_definitions(-DQNN_API=__attribute__\(\(visibility\(\"default\"\)\)\))
 endif()
 
-# shared library (JNI)
-add_library(${PROJECT_NAME} SHARED ${SOURCES})
+# executable (spawned by BackendService as a subprocess; the lib*.so name
+# makes Android package it into nativeLibraryDir where exec() is allowed)
+add_executable(${PROJECT_NAME} ${SOURCES})
 if(NOT QNN_DEBUG_ENABLE)
     target_link_options(${PROJECT_NAME} PRIVATE "-Wl,-s")
 endif()
@@ -187,7 +205,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${PACKAGE_INCLUDES})
 
 set_target_properties(${PROJECT_NAME}
     PROPERTIES
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/obj/local/${OUTPUT_SUFFIX}"
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/${OUTPUT_SUFFIX}"
 )
 
 target_compile_definitions(${PROJECT_NAME}
